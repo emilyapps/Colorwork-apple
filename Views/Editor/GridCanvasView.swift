@@ -21,6 +21,20 @@ struct GridCanvasView: View {
                 .frame(width:  doc.tileCanvasSize.width,
                        height: doc.tileCanvasSize.height)
                 .contentShape(Rectangle())
+                #if os(iOS)
+                .overlay(
+                    GestureOverlayView(
+                        onDragChanged:  { handleDrag(at: $0) },
+                        onDragEnded:    endDrag,
+                        onPinchChanged: { scale in
+                            if scaleBaseSize == 0 { scaleBaseSize = doc.cellSize }
+                            doc.cellSize = max(8, min(60, scaleBaseSize * scale))
+                            doc.rebuildDescriptors()
+                        },
+                        onPinchEnded: { scaleBaseSize = 0 }
+                    )
+                )
+                #else
                 .gesture(
                     DragGesture(minimumDistance: 0)
                         .onChanged { value in handleDrag(at: value.location) }
@@ -36,6 +50,7 @@ struct GridCanvasView: View {
                                 .onEnded { _ in scaleBaseSize = 0 }
                         )
                 )
+                #endif
             }
             .onAppear             { doc.canvasAvailableSize = geo.size; doc.fitCellSize() }
             .onChange(of: geo.size) { _, size in doc.canvasAvailableSize = size }
@@ -82,6 +97,9 @@ struct GridCanvasView: View {
 
         // Lock region for the whole drag gesture
         if dragRegion == nil { dragRegion = region }
+
+        // Push undo once at the start of each stroke
+        if dragVisited.isEmpty { doc.pushUndo("Paint") }
         guard region == dragRegion else { return }
 
         let key = CellIndex(row: cell.row, col: cell.col)

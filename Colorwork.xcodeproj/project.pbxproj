@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C82B598B2F8AA2EB003CDF73 /* ColorPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82B598A2F8AA2EB003CDF73 /* ColorPreviewView.swift */; };
+		C82B598D2F8AD37E003CDF73 /* GestureOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */; };
 		C87A4F932F85EA2100F12544 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4F912F85EA2100F12544 /* ContentView.swift */; };
 		C87A4F942F85EA2100F12544 /* ColorworkApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4F902F85EA2100F12544 /* ColorworkApp.swift */; };
 		C87A4FC12F85EAAF00F12544 /* CSS4Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FAF2F85EAAF00F12544 /* CSS4Colors.swift */; };
@@ -28,13 +30,13 @@
 		C87A4FD12F85EAAF00F12544 /* ColorMath.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FA02F85EAAF00F12544 /* ColorMath.swift */; };
 		C87A4FD22F85EAAF00F12544 /* SymmetryGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FA32F85EAAF00F12544 /* SymmetryGroup.swift */; };
 		C87A4FD32F85EAAF00F12544 /* PDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FA62F85EAAF00F12544 /* PDFExporter.swift */; };
-		C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */; };
-		C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */; };
 		C87A4FD42F85EAAF00F12544 /* TilingSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FBE2F85EAAF00F12544 /* TilingSettingsView.swift */; };
 		C87A4FD52F85EAAF00F12544 /* GridCanvasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FB82F85EAAF00F12544 /* GridCanvasView.swift */; };
 		C87A4FD62F85EAAF00F12544 /* PatternEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FB92F85EAAF00F12544 /* PatternEditorView.swift */; };
 		C87A4FD72F85EAAF00F12544 /* PatternDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FA92F85EAAF00F12544 /* PatternDocument.swift */; };
 		C87A4FD92F85F69C00F12544 /* SidebarView 2.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FD82F85F69C00F12544 /* SidebarView 2.swift */; };
+		C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */; };
+		C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +57,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C82B598A2F8AA2EB003CDF73 /* ColorPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPreviewView.swift; sourceTree = "<group>"; };
+		C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureOverlayView.swift; sourceTree = "<group>"; };
 		C87A4F152F853B5100F12544 /* Colorwork.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Colorwork.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C87A4F252F853B5200F12544 /* ColorworkTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorworkTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C87A4F2F2F853B5200F12544 /* ColorworkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorworkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -66,8 +70,6 @@
 		C87A4FA32F85EAAF00F12544 /* SymmetryGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SymmetryGroup.swift; sourceTree = "<group>"; };
 		C87A4FA42F85EAAF00F12544 /* TilingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilingEngine.swift; sourceTree = "<group>"; };
 		C87A4FA62F85EAAF00F12544 /* PDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFExporter.swift; sourceTree = "<group>"; };
-		C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter.swift; sourceTree = "<group>"; };
-		C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPanel.swift; sourceTree = "<group>"; };
 		C87A4FA82F85EAAF00F12544 /* ColorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorState.swift; sourceTree = "<group>"; };
 		C87A4FA92F85EAAF00F12544 /* PatternDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternDocument.swift; sourceTree = "<group>"; };
 		C87A4FAA2F85EAAF00F12544 /* TilingSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilingSettings.swift; sourceTree = "<group>"; };
@@ -86,6 +88,8 @@
 		C87A4FBD2F85EAAF00F12544 /* TilingPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilingPreviewView.swift; sourceTree = "<group>"; };
 		C87A4FBE2F85EAAF00F12544 /* TilingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilingSettingsView.swift; sourceTree = "<group>"; };
 		C87A4FD82F85F69C00F12544 /* SidebarView 2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SidebarView 2.swift"; sourceTree = "<group>"; };
+		C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter.swift; sourceTree = "<group>"; };
+		C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPanel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -221,6 +225,7 @@
 			children = (
 				C87A4FB12F85EAAF00F12544 /* CMYKSlidersView.swift */,
 				C87A4FB22F85EAAF00F12544 /* ColorCompareView.swift */,
+				C82B598A2F8AA2EB003CDF73 /* ColorPreviewView.swift */,
 				C87A4FB32F85EAAF00F12544 /* ColorPickerSheetView.swift */,
 				C87A4FB42F85EAAF00F12544 /* HSLSlidersView.swift */,
 				C87A4FB52F85EAAF00F12544 /* NamedPaletteView.swift */,
@@ -233,6 +238,7 @@
 			children = (
 				C87A4FB72F85EAAF00F12544 /* ControlPanelView.swift */,
 				C87A4FD82F85F69C00F12544 /* SidebarView 2.swift */,
+				C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */,
 				C87A4FB82F85EAAF00F12544 /* GridCanvasView.swift */,
 				C87A4FB92F85EAAF00F12544 /* PatternEditorView.swift */,
 			);
@@ -415,6 +421,7 @@
 				C87A4FC22F85EAAF00F12544 /* ControlPanelView.swift in Sources */,
 				C87A4FC32F85EAAF00F12544 /* SDModels.swift in Sources */,
 				C87A4FC42F85EAAF00F12544 /* ColorPickerSheetView.swift in Sources */,
+				C82B598D2F8AD37E003CDF73 /* GestureOverlayView.swift in Sources */,
 				C87A4FC52F85EAAF00F12544 /* TilingSettings.swift in Sources */,
 				C87A4FC62F85EAAF00F12544 /* ColorCompareView.swift in Sources */,
 				C87A4FC72F85EAAF00F12544 /* PatternStore.swift in Sources */,
@@ -426,6 +433,7 @@
 				C87A4FCD2F85EAAF00F12544 /* CMYKSlidersView.swift in Sources */,
 				C87A4FCE2F85EAAF00F12544 /* ColorState.swift in Sources */,
 				C87A4FD92F85F69C00F12544 /* SidebarView 2.swift in Sources */,
+				C82B598B2F8AA2EB003CDF73 /* ColorPreviewView.swift in Sources */,
 				C87A4FCF2F85EAAF00F12544 /* RenderDescriptor.swift in Sources */,
 				C87A4FD02F85EAAF00F12544 /* PatternEngine.swift in Sources */,
 				C87A4FD12F85EAAF00F12544 /* ColorMath.swift in Sources */,
@@ -594,6 +602,7 @@
 				CODE_SIGN_ENTITLEMENTS = Colorwork/Colorwork.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 743DWCGB58;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
@@ -631,6 +640,7 @@
 				CODE_SIGN_ENTITLEMENTS = Colorwork/Colorwork.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 743DWCGB58;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

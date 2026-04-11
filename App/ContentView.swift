@@ -6,10 +6,16 @@ import SwiftData
 
 // Each window owns its own PatternDocument — ensures new windows are independent.
 struct WindowRootView: View {
-    @State private var document = PatternDocument()
+    @State private var document    = PatternDocument()
+    @State private var undoManager = UndoManager()
+
     var body: some View {
         ContentView()
             .environment(document)
+            .onAppear {
+                undoManager.levelsOfUndo = 50
+                document.undoManager = undoManager
+            }
     }
 }
 
@@ -137,6 +143,9 @@ struct LibraryView: View {
     @State private var statusMsg   = ""
     @FocusState private var nameFieldFocused: Bool
 
+    @State private var patternPendingDelete: SDPattern? = nil
+    @State private var projectPendingDelete: SDProject? = nil
+
     var body: some View {
         VStack(spacing: 0) {
             Picker("", selection: $selectedTab) {
@@ -175,14 +184,12 @@ struct LibraryView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            try? PatternStore(context: modelContext).deletePattern(p)
+                            patternPendingDelete = p
                         } label: { Label("Delete", systemImage: "trash") }
                     }
                 }
                 .onDelete { idxs in
-                    for i in idxs {
-                        try? PatternStore(context: modelContext).deletePattern(patterns[i])
-                    }
+                    if let i = idxs.first { patternPendingDelete = patterns[i] }
                 }
             }
 
@@ -207,6 +214,20 @@ struct LibraryView: View {
             }
             .padding()
         }
+        .confirmationDialog(
+            "Delete \"\(patternPendingDelete?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { patternPendingDelete != nil },
+                set: { if !$0 { patternPendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let p = patternPendingDelete {
+                    try? PatternStore(context: modelContext).deletePattern(p)
+                }
+                patternPendingDelete = nil
+            }
+        }
     }
 
     private var projectList: some View {
@@ -229,14 +250,12 @@ struct LibraryView: View {
                     }
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
-                            try? PatternStore(context: modelContext).deleteProject(p)
+                            projectPendingDelete = p
                         } label: { Label("Delete", systemImage: "trash") }
                     }
                 }
                 .onDelete { idxs in
-                    for i in idxs {
-                        try? PatternStore(context: modelContext).deleteProject(projects[i])
-                    }
+                    if let i = idxs.first { projectPendingDelete = projects[i] }
                 }
             }
 
@@ -258,6 +277,20 @@ struct LibraryView: View {
                 }
             }
             .padding()
+        }
+        .confirmationDialog(
+            "Delete \"\(projectPendingDelete?.name ?? "")\"?",
+            isPresented: Binding(
+                get: { projectPendingDelete != nil },
+                set: { if !$0 { projectPendingDelete = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let p = projectPendingDelete {
+                    try? PatternStore(context: modelContext).deleteProject(p)
+                }
+                projectPendingDelete = nil
+            }
         }
     }
 

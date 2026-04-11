@@ -1,31 +1,20 @@
 // ColorPickerSheetView.swift
-// Compact vertical color sheet for iOS.
-// No NavigationStack or TabView chrome — keeps height small enough
-// that the pattern remains visible above the sheet at .medium detent.
+// Color controls panel: Fill/Bg toggle, swatch, hex field, and tab switcher.
+// Embedded inside ColorSheetView which provides the NavigationStack and header.
 
 import SwiftUI
 
 struct ColorPickerSheetView: View {
     @Environment(PatternDocument.self) var doc
-    @Environment(\.dismiss) var dismiss
 
-    @State private var selectedTab  = 0  // 0=Palette, 1=CMYK, 2=Compare
-    @State private var activeTarget = ColorTarget.fill
+    @State private var selectedTab       = 0  // 0=Palette, 1=CMYK, 2=Compare
+    @State private var activeTarget      = ColorTarget.fill
+    @State private var colorsOnOpen: (fill: String, bg: String)? = nil
 
     enum ColorTarget { case fill, bg }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-
-            // Header
-            HStack {
-                Text("Colors").font(.headline)
-                Spacer()
-                Button("Done") { dismiss() }
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 8)
 
             // Fill / Background picker
             Picker("Color", selection: $activeTarget) {
@@ -85,6 +74,20 @@ struct ColorPickerSheetView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .onChange(of: activeColor.hex) { _, _ in doc.rebuildDescriptors() }
+        .onAppear  { colorsOnOpen = (doc.fillColor.hex, doc.bgColor.hex) }
+        .onDisappear {
+            if let snap = colorsOnOpen,
+               snap.fill != doc.fillColor.hex || snap.bg != doc.bgColor.hex {
+                let old = snap
+                doc.undoManager?.registerUndo(withTarget: doc) { d in
+                    d.fillColor.setHex(old.fill)
+                    d.bgColor.setHex(old.bg)
+                    d.rebuildDescriptors()
+                }
+                doc.undoManager?.setActionName("Change Color")
+            }
+            colorsOnOpen = nil
+        }
     }
 
     private var activeColor: ColorState {
@@ -102,6 +105,35 @@ struct ColorPickerSheetView: View {
                 }))
             .font(.system(size: 13, design: .monospaced))
             .frame(width: 80)
+        }
+    }
+}
+
+// MARK: - iOS sheet wrapper
+
+struct ColorSheetView: View {
+    @Environment(\.dismiss) var dismiss
+    @Environment(PatternDocument.self) var doc
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ColorPreviewView()
+                    .frame(height: 200)
+                    .frame(maxWidth: .infinity)
+                Divider()
+                ColorPickerSheetView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .navigationTitle("Colors")
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }

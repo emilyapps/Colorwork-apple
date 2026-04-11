@@ -98,6 +98,7 @@ enum PatternEngine {
     ) {
         let rows = strip.count
         let cols = strip.first?.count ?? 0
+        guard row < rows, col < cols else { return }
         let val  = strip[row][col]
         let mr   = rows - 1 - row
         let mc   = cols - 1 - col

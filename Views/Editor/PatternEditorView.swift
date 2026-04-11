@@ -13,11 +13,13 @@ struct PatternEditorView: View {
     @State private var showExportPicker = false
 
     var body: some View {
-        #if os(macOS)
-        macLayout
-        #else
-        iphoneLayout
-        #endif
+        Group {
+            #if os(macOS)
+            macLayout
+            #else
+            iphoneLayout
+            #endif
+        }
     }
 
     // MARK: - macOS: sidebar + pattern + tiling
@@ -69,12 +71,13 @@ struct PatternEditorView: View {
                 .ignoresSafeArea(edges: .horizontal)
         }
         .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("", systemImage: "square.and.arrow.up") { export() }
+            }
             ToolbarItemGroup(placement: .bottomBar) {
                 Button("", systemImage: "wand.and.stars")                         { doc.generate() }
                 Spacer()
                 Button("", systemImage: "trash")                                  { doc.clear() }
-                Spacer()
-                Button("", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
                 Spacer()
                 Button("", systemImage: "slider.horizontal.3")                    { showControls.toggle() }
                 Spacer()
@@ -82,7 +85,10 @@ struct PatternEditorView: View {
                 Spacer()
                 Button("", systemImage: "square.grid.3x3")                        { showTiling.toggle() }
                 Spacer()
-                Button("", systemImage: "square.and.arrow.up")                    { export() }
+                Button("", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
+                Spacer()
+                Button("", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
+                    .disabled(!doc.canUndo)
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {
@@ -96,8 +102,8 @@ struct PatternEditorView: View {
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showColors) {
-            ColorPickerSheetView()
-                .presentationDetents([.medium, .large])
+            ColorSheetView()
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showTiling) {

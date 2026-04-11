@@ -12,12 +12,22 @@ final class PatternDocument {
 
     // MARK: - Grid state
     var grid:   [[Bool]] = []
-    var H:      Int = 8
-    var W:      Int = 8
+    var H: Int = 8 { didSet { if !isMutatingInternally && oldValue != H { pushUndo("Resize Grid") } } }
+    var W: Int = 8 { didSet { if !isMutatingInternally && oldValue != W { pushUndo("Resize Grid") } } }
 
     var symmetryGroup: SymmetryGroup = .d4 {
-        didSet { if symmetryGroup.requiresSquare { W = H }; regenerateDomain() }
+        didSet {
+            pushUndo("Change Symmetry")
+            if symmetryGroup.requiresSquare {
+                isMutatingInternally = true
+                W = H
+                isMutatingInternally = false
+            }
+            regenerateDomain()
+        }
     }
+
+    private var isMutatingInternally = false
 
     private(set) var domainCells:    [CellIndex] = []
     private(set) var domainSet:      Set<CellIndex> = []
@@ -38,11 +48,30 @@ final class PatternDocument {
     var bgColor   = ColorState(hex: "#f5f0e8")
 
     // MARK: - Tiling
-    var tiling = TilingSettings()
+    var tiling = TilingSettings() {
+        didSet {
+            if oldValue.stripWidth != tiling.stripWidth { resetStrips() }
+        }
+    }
 
     // MARK: - Persistence metadata
     var currentPatternName: String = "Untitled"
     var isDirty:            Bool   = false
+
+    // MARK: - Undo
+    var undoManager: UndoManager?
+    private(set) var canUndo: Bool = false
+
+    func pushUndo(_ name: String) {
+        let snapshot = PatternSnapshot(from: self)
+        undoManager?.registerUndo(withTarget: self) { doc in
+            doc.pushUndo(name)
+            snapshot.apply(to: doc)
+            doc.canUndo = doc.undoManager?.canUndo ?? false
+        }
+        undoManager?.setActionName(name)
+        canUndo = undoManager?.canUndo ?? false
+    }
 
     // MARK: - Cached descriptors (invalidated when state changes)
     private(set) var tileDescriptors:   [RenderDescriptor] = []
@@ -76,7 +105,12 @@ final class PatternDocument {
     // MARK: - Actions
 
     func generate() {
-        if symmetryGroup.requiresSquare { W = H }
+        pushUndo("Generate")
+        if symmetryGroup.requiresSquare {
+            isMutatingInternally = true
+            W = H
+            isMutatingInternally = false
+        }
         let result = PatternEngine.generatePattern(H: H, W: W, group: symmetryGroup, density: density)
         grid             = result.grid
         domainCells      = result.domain
@@ -89,6 +123,7 @@ final class PatternDocument {
     }
 
     func clear() {
+        pushUndo("Clear")
         grid = PatternEngine.clearGrid(H: H, W: W)
         resetStrips()
         rebuildTileDescriptors()
