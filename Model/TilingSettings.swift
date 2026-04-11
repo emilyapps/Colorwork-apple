@@ -5,9 +5,11 @@ import Foundation
 struct TilingSettings: Codable, Equatable {
     var hRepeat:   Bool       = false
     var vRepeat:   Bool       = false
-    var stripWidth: Int       = 1
     var hType:     RepeatType = .translation
     var vType:     RepeatType = .translation
+    var stripWidth: Int       = 1
+    var stripHReflect: Bool = false
+    var stripVReflect: Bool = false
     var rowOffset: Int        = 0
     var colOffset: Int        = 0
 

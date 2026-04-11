@@ -3,6 +3,7 @@
 
 import Foundation
 import SwiftData
+import SwiftUI
 
 @MainActor
 final class PatternStore {
@@ -24,6 +25,10 @@ final class PatternStore {
         let cornerData    = try? encoder.encode(doc.corner)
         let tilingData    = try? encoder.encode(doc.tiling)
 
+        let thumb = Self.makeThumbnail(
+            grid: doc.grid, H: doc.H, W: doc.W,
+            fillHex: doc.fillColor.hex, bgHex: doc.bgColor.hex)
+
         let pattern = SDPattern(
             name:          name,
             gridW:         doc.W,
@@ -37,6 +42,7 @@ final class PatternStore {
             rowStripData:  rowStripData,
             cornerData:    cornerData,
             tilingData:    tilingData)
+        pattern.thumbnailData = thumb
         context.insert(pattern)
         try context.save()
     }
@@ -82,6 +88,11 @@ final class PatternStore {
         let snapshot = PatternSnapshot(from: doc)
         let data = try encoder.encode(snapshot)
         let project = SDProject(name: name, data: data)
+        project.thumbnailData = Self.makeThumbnail(
+            grid: doc.grid, H: doc.H, W: doc.W,
+            fillHex: doc.fillColor.hex, bgHex: doc.bgColor.hex,
+            colStrip: doc.colStrip, rowStrip: doc.rowStrip,
+            tiling: doc.tiling)
         context.insert(project)
         try context.save()
     }
@@ -101,5 +112,49 @@ final class PatternStore {
     func deleteProject(_ project: SDProject) throws {
         context.delete(project)
         try context.save()
+    }
+
+    // MARK: - Thumbnail
+
+    private static func makeThumbnail(
+        grid: [[Bool]], H: Int, W: Int,
+        fillHex: String, bgHex: String,
+        colStrip: [[Bool]] = [], rowStrip: [[Bool]] = [],
+        tiling: TilingSettings = TilingSettings()
+    ) -> Data? {
+        let cs: CGFloat = 4
+        let sw = tiling.stripWidth
+        let hOn = tiling.hRepeat && sw > 0
+        let vOn = tiling.vRepeat && sw > 0
+        let pw = (CGFloat(W) + (hOn ? CGFloat(sw) : 0)) * cs
+        let ph = (CGFloat(H) + (vOn ? CGFloat(sw) : 0)) * cs
+        let descriptors = DescriptorBuilder.tileDescriptors(
+            grid: grid, H: H, W: W, cellSize: cs,
+            fillColor: fillHex, bgColor: bgHex,
+            domainCells: [], showDomain: false,
+            colStrip: colStrip, rowStrip: rowStrip, corner: [],
+            hOn: hOn, vOn: vOn, stripWidth: sw)
+        let view = Canvas { ctx, _ in
+            for d in descriptors {
+                if case .rect(let r) = d {
+                    ctx.fill(Path(CGRect(
+                        x: r.x - Layout.padding, y: r.y - Layout.padding,
+                        width: r.w, height: r.h)),
+                        with: .color(ColorMath.color(from: r.fill)))
+                }
+            }
+        }
+        .frame(width: pw, height: ph)
+        let renderer = ImageRenderer(content: view)
+        renderer.scale = 1
+        #if os(macOS)
+        return renderer.nsImage.flatMap {
+            $0.tiffRepresentation.flatMap {
+                NSBitmapImageRep(data: $0)?.representation(using: .png, properties: [:])
+            }
+        }
+        #else
+        return renderer.uiImage.flatMap { $0.pngData() }
+        #endif
     }
 }

@@ -23,6 +23,7 @@ final class SDPattern {
     var rowStripData:   Data?
     var cornerData:     Data?
     var tilingData:     Data?              // JSONEncoder(TilingSettings)
+    var thumbnailData:  Data?              // PNG rendered at save time
 
     init(name: String, gridW: Int, gridH: Int, symmetryGroup: String,
          fillColor: String, bgColor: String, fillDensity: Double,
@@ -53,6 +54,8 @@ final class SDProject {
     var name:      String = ""
     var createdAt: Date   = Date()
     var data:      Data   = Data()   // JSONEncoder(PatternSnapshot)
+
+    var thumbnailData: Data? = nil
 
     init(name: String, data: Data) {
         self.id        = UUID()

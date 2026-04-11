@@ -90,4 +90,20 @@ enum PatternEngine {
         guard row < strip.count, col < (strip.first?.count ?? 0) else { return }
         strip[row][col].toggle()
     }
+
+    static func applyStripReflect(
+        row: Int, col: Int,
+        in strip: inout [[Bool]],
+        hReflect: Bool, vReflect: Bool
+    ) {
+        let rows = strip.count
+        let cols = strip.first?.count ?? 0
+        let val  = strip[row][col]
+        let mr   = rows - 1 - row
+        let mc   = cols - 1 - col
+
+        if hReflect && mc != col                          { strip[row][mc] = val }
+        if vReflect && mr != row                          { strip[mr][col] = val }
+        if hReflect && vReflect && mr != row && mc != col { strip[mr][mc]  = val }
+    }
 }

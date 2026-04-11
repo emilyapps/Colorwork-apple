@@ -8,23 +8,40 @@ struct GridCanvasView: View {
     @Environment(PatternDocument.self) var doc
 
     // Track cells already toggled in the current drag gesture
-    @State private var dragVisited = Set<CellIndex>()
-    @State private var dragRegion: CellRegion? = nil
+    @State private var dragVisited  = Set<CellIndex>()
+    @State private var dragRegion:  CellRegion? = nil
+    @State private var scaleBaseSize: Double = 0
 
     var body: some View {
-        ScrollView([.horizontal, .vertical]) {
-            Canvas { ctx, _ in
-                draw(ctx)
+        GeometryReader { geo in
+            ScrollView([.horizontal, .vertical]) {
+                Canvas { ctx, _ in
+                    draw(ctx)
+                }
+                .frame(width:  doc.tileCanvasSize.width,
+                       height: doc.tileCanvasSize.height)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { value in handleDrag(at: value.location) }
+                        .onEnded   { _ in endDrag() }
+                        .simultaneously(with:
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    if scaleBaseSize == 0 { scaleBaseSize = doc.cellSize }
+                                    let newSize = max(8, min(60, scaleBaseSize * value))
+                                    doc.cellSize = newSize
+                                    doc.rebuildDescriptors()
+                                }
+                                .onEnded { _ in scaleBaseSize = 0 }
+                        )
+                )
             }
-            .frame(width:  doc.tileCanvasSize.width,
-                   height: doc.tileCanvasSize.height)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { value in handleDrag(at: value.location) }
-                    .onEnded   { _ in endDrag() }
-            )
+            .onAppear             { doc.canvasAvailableSize = geo.size; doc.fitCellSize() }
+            .onChange(of: geo.size) { _, size in doc.canvasAvailableSize = size }
         }
+        .onChange(of: doc.H) { _, _ in doc.fitCellSize() }
+        .onChange(of: doc.W) { _, _ in doc.fitCellSize() }
     }
 
     // MARK: - Drawing

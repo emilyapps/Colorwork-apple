@@ -48,8 +48,12 @@ struct PatternEditorView: View {
             }
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Export…") { export() }
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button("Generate") { doc.generate() }
+                    .keyboardShortcut("g", modifiers: .command)
+                Button("Clear")    { doc.clear() }
+                Button("", systemImage: "arrow.up.left.and.arrow.down.right") { doc.fitCellSize() }
+                Button("Export…")  { export() }
                     .keyboardShortcut("e", modifiers: [.command, .shift])
             }
         }
@@ -66,13 +70,19 @@ struct PatternEditorView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .bottomBar) {
-                Button("", systemImage: "slider.horizontal.3") { showControls.toggle() }
+                Button("", systemImage: "wand.and.stars")                         { doc.generate() }
                 Spacer()
-                Button("", systemImage: "paintpalette")        { showColors.toggle() }
+                Button("", systemImage: "trash")                                  { doc.clear() }
                 Spacer()
-                Button("", systemImage: "square.grid.3x3")     { showTiling.toggle() }
+                Button("", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
                 Spacer()
-                Button("", systemImage: "square.and.arrow.up") { export() }
+                Button("", systemImage: "slider.horizontal.3")                    { showControls.toggle() }
+                Spacer()
+                Button("", systemImage: "paintpalette")                           { showColors.toggle() }
+                Spacer()
+                Button("", systemImage: "square.grid.3x3")                        { showTiling.toggle() }
+                Spacer()
+                Button("", systemImage: "square.and.arrow.up")                    { export() }
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {
@@ -87,7 +97,7 @@ struct PatternEditorView: View {
         }
         .sheet(isPresented: $showColors) {
             ColorPickerSheetView()
-                .presentationDetents([.large])
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showTiling) {

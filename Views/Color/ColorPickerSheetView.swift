@@ -1,5 +1,7 @@
 // ColorPickerSheetView.swift
-// Tabbed color picker sheet combining CMYK, HSL, palette, and compare views.
+// Compact vertical color sheet for iOS.
+// No NavigationStack or TabView chrome — keeps height small enough
+// that the pattern remains visible above the sheet at .medium detent.
 
 import SwiftUI
 
@@ -7,73 +9,82 @@ struct ColorPickerSheetView: View {
     @Environment(PatternDocument.self) var doc
     @Environment(\.dismiss) var dismiss
 
-    @State private var selectedTab = 0  // 0=CMYK, 1=HSL, 2=Palette, 3=Compare
+    @State private var selectedTab  = 0  // 0=Palette, 1=CMYK, 2=Compare
     @State private var activeTarget = ColorTarget.fill
 
     enum ColorTarget { case fill, bg }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                // Fill / BG selector
-                Picker("Color", selection: $activeTarget) {
-                    Text("Fill").tag(ColorTarget.fill)
-                    Text("Background").tag(ColorTarget.bg)
-                }
-                .pickerStyle(.segmented)
-                .padding([.horizontal, .top])
+        VStack(alignment: .leading, spacing: 0) {
 
-                // Current color swatch + hex
-                HStack(spacing: 12) {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(ColorMath.color(from: activeColor.hex))
-                        .frame(width: 48, height: 48)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.secondary.opacity(0.3), lineWidth: 1))
-                    VStack(alignment: .leading) {
-                        Text(activeColor.hex.uppercased())
-                            .font(.system(size: 14, design: .monospaced))
-                        hexField
+            // Header
+            HStack {
+                Text("Colors").font(.headline)
+                Spacer()
+                Button("Done") { dismiss() }
+            }
+            .padding(.horizontal)
+            .padding(.top, 16)
+            .padding(.bottom, 8)
+
+            // Fill / Background picker
+            Picker("Color", selection: $activeTarget) {
+                Text("Fill").tag(ColorTarget.fill)
+                Text("Background").tag(ColorTarget.bg)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+
+            // Swatch + hex
+            HStack(spacing: 12) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(ColorMath.color(from: activeColor.hex))
+                    .frame(width: 44, height: 44)
+                    .overlay(RoundedRectangle(cornerRadius: 8)
+                        .stroke(.secondary.opacity(0.3), lineWidth: 1))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(activeColor.hex.uppercased())
+                        .font(.system(size: 13, design: .monospaced))
+                    hexField
+                }
+                Spacer()
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 10)
+
+            Divider()
+
+            // Tab picker
+            Picker("", selection: $selectedTab) {
+                Text("Palette").tag(0)
+                Text("CMYK").tag(1)
+                Text("Compare").tag(2)
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+
+            // Content
+            Group {
+                switch selectedTab {
+                case 1:
+                    ScrollView {
+                        CMYKSlidersView(colorState: activeColor, label: "CMYK")
+                            .padding(.horizontal)
                     }
-                    Spacer()
-                }
-                .padding()
-
-                Divider()
-
-                // Tabs
-                TabView(selection: $selectedTab) {
-                    CMYKSlidersView(colorState: activeColor, label: "")
-                        .padding()
-                        .tabItem { Label("CMYK", systemImage: "slider.horizontal.3") }
-                        .tag(0)
-
-                    HSLSlidersView(colorState: activeColor, label: "")
-                        .padding()
-                        .tabItem { Label("HSL", systemImage: "circle.hexagongrid") }
-                        .tag(1)
-
+                case 2:
+                    ScrollView {
+                        ColorCompareView()
+                            .padding(.horizontal)
+                    }
+                default:
                     NamedPaletteView(target: activeTarget == .fill ? .fill : .bg)
-                        .padding()
-                        .tabItem { Label("Palette", systemImage: "paintpalette") }
-                        .tag(2)
-
-                    ColorCompareView()
-                        .padding()
-                        .tabItem { Label("Compare", systemImage: "chart.bar") }
-                        .tag(3)
-                }
-                .onChange(of: activeColor.hex) { _, _ in doc.rebuildDescriptors() }
-            }
-            .navigationTitle("Colors")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                        .padding(.horizontal)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .onChange(of: activeColor.hex) { _, _ in doc.rebuildDescriptors() }
     }
 
     private var activeColor: ColorState {

@@ -77,7 +77,7 @@ enum DescriptorBuilder {
             for c in 0 ..< W {
                 let x0 = Layout.padding + CGFloat(c) * cs
                 let y0 = Layout.padding + CGFloat(r) * cs
-                let fill = grid[r][c] ? fillColor : bgColor
+                let fill = safeGet(grid, r, c) ? fillColor : bgColor
                 let cell = CellIndex(row: r, col: c)
                 let (ol, ow): (String, CGFloat) = showDomain && domainCells.contains(cell)
                     ? ("#e63946", 2) : ("#cccccc", 1)

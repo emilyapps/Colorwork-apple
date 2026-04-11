@@ -79,35 +79,46 @@ struct ContentView: View {
     }
     #endif
 
-    // MARK: - Save / Load menu
+    // MARK: - Persistence actions
+
+    private enum SaveType { case pattern, project }
+
+    @State private var saveName      = ""
+    @State private var showSaveAlert = false
+    @State private var saveType: SaveType = .pattern
 
     private var saveLoadMenu: some View {
         Menu {
-            Button("Save Pattern…")  { savePattern()  }
-            Button("Save Project…")  { saveProject()  }
-            Divider()
-            Button("Load Pattern…")  { /* opens LibraryView sheet */ }
-            Button("Load Project…")  { /* opens LibraryView sheet */ }
+            Button("Save Pattern…") {
+                saveName  = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
+                saveType  = .pattern
+                showSaveAlert = true
+            }
+            Button("Save Project…") {
+                saveName  = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
+                saveType  = .project
+                showSaveAlert = true
+            }
         } label: {
             Label("Library", systemImage: "folder")
         }
+        .alert(saveType == .pattern ? "Save Pattern" : "Save Project",
+               isPresented: $showSaveAlert) {
+            TextField("Name", text: $saveName)
+            Button("Save") { commitSave() }
+            Button("Cancel", role: .cancel) { }
+        }
     }
 
-    // MARK: - Persistence actions
-
-    @State private var saveName = ""
-    @State private var showSaveAlert = false
-
-    private func savePattern() {
+    private func commitSave() {
+        let name = saveName.isEmpty
+            ? (saveType == .pattern ? "Pattern" : "Project")
+            : saveName
         let store = PatternStore(context: modelContext)
-        let name  = doc.currentPatternName == "Untitled" ? "Pattern" : doc.currentPatternName
-        try? store.savePattern(from: doc, name: name)
-    }
-
-    private func saveProject() {
-        let store = PatternStore(context: modelContext)
-        let name  = doc.currentPatternName == "Untitled" ? "Project" : doc.currentPatternName
-        try? store.saveProject(from: doc, name: name)
+        switch saveType {
+        case .pattern: try? store.savePattern(from: doc, name: name)
+        case .project: try? store.saveProject(from: doc, name: name)
+        }
     }
 }
 
@@ -122,6 +133,9 @@ struct LibraryView: View {
     @Query(sort: \SDProject.createdAt, order: .reverse) var projects: [SDProject]
 
     @State private var selectedTab = 0
+    @State private var saveName    = ""
+    @State private var statusMsg   = ""
+    @FocusState private var nameFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -142,47 +156,132 @@ struct LibraryView: View {
     }
 
     private var patternList: some View {
-        List {
-            ForEach(patterns) { p in
-                Button {
-                    PatternStore(context: modelContext).loadPattern(p, into: doc)
-                    dismiss()
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(p.name).font(.headline)
-                        Text("\(p.gridW)×\(p.gridH)  \(p.symmetryGroup.uppercased())  \(dateString(p.createdAt))")
-                            .font(.caption).foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            List {
+                ForEach(patterns) { p in
+                    Button {
+                        PatternStore(context: modelContext).loadPattern(p, into: doc)
+                        statusMsg = "Loaded \(p.name)"
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 10) {
+                            thumbView(p.thumbnailData, size: 44)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(p.name).font(.headline)
+                                Text("\(p.gridW)×\(p.gridH)  \(p.symmetryGroup.uppercased())  \(dateString(p.createdAt))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            try? PatternStore(context: modelContext).deletePattern(p)
+                        } label: { Label("Delete", systemImage: "trash") }
+                    }
+                }
+                .onDelete { idxs in
+                    for i in idxs {
+                        try? PatternStore(context: modelContext).deletePattern(patterns[i])
                     }
                 }
             }
-            .onDelete { idxs in
-                for i in idxs {
-                    try? PatternStore(context: modelContext).deletePattern(patterns[i])
+
+            Divider()
+
+            VStack(spacing: 8) {
+                TextField("Name…", text: $saveName)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($nameFieldFocused)
+                Button("Save Pattern") {
+                    nameFieldFocused = false
+                    let name = saveName.isEmpty ? "Pattern" : saveName
+                    try? PatternStore(context: modelContext).savePattern(from: doc, name: name)
+                    statusMsg = "Saved \(name)"
+                    saveName = ""
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+                if !statusMsg.isEmpty {
+                    Text(statusMsg).font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .padding()
         }
     }
 
     private var projectList: some View {
-        List {
-            ForEach(projects) { p in
-                Button {
-                    try? PatternStore(context: modelContext).loadProject(p, into: doc)
-                    dismiss()
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(p.name).font(.headline)
-                        Text(dateString(p.createdAt))
-                            .font(.caption).foregroundStyle(.secondary)
+        VStack(spacing: 0) {
+            List {
+                ForEach(projects) { p in
+                    Button {
+                        try? PatternStore(context: modelContext).loadProject(p, into: doc)
+                        statusMsg = "Loaded \(p.name)"
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 10) {
+                            thumbView(p.thumbnailData, size: 44)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(p.name).font(.headline)
+                                Text(dateString(p.createdAt))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .swipeActions(edge: .trailing) {
+                        Button(role: .destructive) {
+                            try? PatternStore(context: modelContext).deleteProject(p)
+                        } label: { Label("Delete", systemImage: "trash") }
+                    }
+                }
+                .onDelete { idxs in
+                    for i in idxs {
+                        try? PatternStore(context: modelContext).deleteProject(projects[i])
                     }
                 }
             }
-            .onDelete { idxs in
-                for i in idxs {
-                    try? PatternStore(context: modelContext).deleteProject(projects[i])
+
+            Divider()
+
+            VStack(spacing: 8) {
+                TextField("Name…", text: $saveName)
+                    .textFieldStyle(.roundedBorder)
+                Button("Save Project") {
+                    let name = saveName.isEmpty ? "Project" : saveName
+                    try? PatternStore(context: modelContext).saveProject(from: doc, name: name)
+                    statusMsg = "Saved \(name)"
+                    saveName = ""
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+                if !statusMsg.isEmpty {
+                    Text(statusMsg).font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .padding()
         }
+    }
+
+    @ViewBuilder
+    private func thumbView(_ data: Data?, size: CGFloat) -> some View {
+        Group {
+            #if os(iOS)
+            if let d = data, let img = UIImage(data: d) {
+                Image(uiImage: img).resizable().scaledToFit()
+            } else { placeholderThumb }
+            #else
+            if let d = data, let img = NSImage(data: d) {
+                Image(nsImage: img).resizable().scaledToFit()
+            } else { placeholderThumb }
+            #endif
+        }
+        .frame(width: size, height: size)
+        .cornerRadius(4)
+    }
+
+    private var placeholderThumb: some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(Color.secondary.opacity(0.2))
+            .overlay(Image(systemName: "squareshape.split.3x3").foregroundStyle(.secondary))
     }
 
     private func dateString(_ date: Date) -> String {

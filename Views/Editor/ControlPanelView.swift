@@ -19,8 +19,6 @@ struct ControlPanelView: View {
                 cellSizeSection
                 Divider()
                 domainToggle
-                Divider()
-                actionButtons
             }
             .padding(12)
         }
@@ -113,16 +111,4 @@ struct ControlPanelView: View {
             .onChange(of: doc.showDomain) { _, _ in doc.rebuildDescriptors() }
     }
 
-    // MARK: - Buttons
-
-    private var actionButtons: some View {
-        HStack(spacing: 10) {
-            Button("Generate") { doc.generate() }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut("g", modifiers: .command)
-            Button("Clear") { doc.clear() }
-                .buttonStyle(.bordered)
-        }
-        .frame(maxWidth: .infinity, alignment: .center)
-    }
 }

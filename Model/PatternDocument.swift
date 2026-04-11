@@ -48,6 +48,18 @@ final class PatternDocument {
     private(set) var tileDescriptors:   [RenderDescriptor] = []
     private(set) var tileCanvasSize:    CGSize = .zero
 
+    // Runtime only — set by GridCanvasView, not persisted
+    var canvasAvailableSize: CGSize = .zero
+
+    func fitCellSize() {
+        guard canvasAvailableSize.width > 0, canvasAvailableSize.height > 0 else { return }
+        let fitW = (canvasAvailableSize.width  - 2 * Layout.padding - Layout.numW) / CGFloat(W)
+        let fitH = (canvasAvailableSize.height - 2 * Layout.padding - Layout.numH) / CGFloat(H)
+        let newSize = max(8, min(60, floor(min(fitW, fitH))))
+        cellSize = Double(newSize)
+        rebuildDescriptors()
+    }
+
     // Tiling grid is computed on a background task
     private(set) var tilingGrid:        [[Bool]] = []
     private(set) var tilingDescriptors: [RenderDescriptor] = []
@@ -92,10 +104,16 @@ final class PatternDocument {
                                      group: symmetryGroup, H: H, W: W)
         case .colStrip:
             PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &colStrip)
+            PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &colStrip,
+                                            hReflect: tiling.stripHReflect, vReflect: tiling.stripVReflect)
         case .rowStrip:
             PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &rowStrip)
+            PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &rowStrip,
+                                            hReflect: tiling.stripHReflect, vReflect: tiling.stripVReflect)
         case .corner:
             PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &corner)
+            PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &corner,
+                                            hReflect: tiling.stripHReflect, vReflect: tiling.stripVReflect)
         }
         rebuildTileDescriptors()
         scheduleTilingRebuild()
@@ -190,8 +208,8 @@ private struct TilingSnapshot {
 
     init(from doc: PatternDocument) {
         grid     = doc.grid
-        H        = doc.H
-        W        = doc.W
+        H        = min(doc.H, doc.grid.count)
+        W        = min(doc.W, doc.grid.first?.count ?? 0)
         colStrip = doc.colStrip
         rowStrip = doc.rowStrip
         corner   = doc.corner

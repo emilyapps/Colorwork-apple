@@ -168,10 +168,13 @@ struct SaveLoadSidebarView: View {
                         PatternStore(context: modelContext).loadPattern(p, into: doc)
                         statusMsg = "Loaded \(p.name)"
                     } label: {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(p.name).font(.system(size: 12, weight: .semibold))
-                            Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
-                                .font(.system(size: 10)).foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            thumbView(p.thumbnailData, size: 36)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(p.name).font(.system(size: 12, weight: .semibold))
+                                Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
+                                    .font(.system(size: 10)).foregroundStyle(.secondary)
+                            }
                         }
                     }
                     .buttonStyle(.plain)
@@ -268,6 +271,29 @@ struct SaveLoadSidebarView: View {
     }
 
     // MARK: Helpers
+
+    @ViewBuilder
+    private func thumbView(_ data: Data?, size: CGFloat) -> some View {
+        Group {
+            #if os(macOS)
+            if let d = data, let img = NSImage(data: d) {
+                Image(nsImage: img).resizable().scaledToFit()
+            } else { placeholderThumb }
+            #else
+            if let d = data, let img = UIImage(data: d) {
+                Image(uiImage: img).resizable().scaledToFit()
+            } else { placeholderThumb }
+            #endif
+        }
+        .frame(width: size, height: size)
+        .cornerRadius(3)
+    }
+
+    private var placeholderThumb: some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(Color.secondary.opacity(0.2))
+            .overlay(Image(systemName: "squareshape.split.3x3").foregroundStyle(.secondary))
+    }
 
     private func shortDate(_ date: Date) -> String {
         let f = DateFormatter()
