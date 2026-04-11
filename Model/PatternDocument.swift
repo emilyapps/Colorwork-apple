@@ -61,6 +61,7 @@ final class PatternDocument {
     // MARK: - Undo
     var undoManager: UndoManager?
     private(set) var canUndo: Bool = false
+    private(set) var canRedo: Bool = false
 
     func pushUndo(_ name: String) {
         let snapshot = PatternSnapshot(from: self)
@@ -68,9 +69,11 @@ final class PatternDocument {
             doc.pushUndo(name)
             snapshot.apply(to: doc)
             doc.canUndo = doc.undoManager?.canUndo ?? false
+            doc.canRedo = doc.undoManager?.canRedo ?? false
         }
         undoManager?.setActionName(name)
         canUndo = undoManager?.canUndo ?? false
+        canRedo = undoManager?.canRedo ?? false
     }
 
     // MARK: - Cached descriptors (invalidated when state changes)
@@ -119,6 +122,7 @@ final class PatternDocument {
         resetStrips()
         rebuildTileDescriptors()
         scheduleTilingRebuild()
+        fitCellSize()
         isDirty = true
     }
 

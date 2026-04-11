@@ -53,7 +53,7 @@ struct GridCanvasView: View {
                 #endif
             }
             .onAppear             { doc.canvasAvailableSize = geo.size; doc.fitCellSize() }
-            .onChange(of: geo.size) { _, size in doc.canvasAvailableSize = size }
+            .onChange(of: geo.size) { _, size in doc.canvasAvailableSize = size; doc.fitCellSize() }
         }
         .onChange(of: doc.H) { _, _ in doc.fitCellSize() }
         .onChange(of: doc.W) { _, _ in doc.fitCellSize() }

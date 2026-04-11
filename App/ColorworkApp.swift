@@ -23,6 +23,7 @@ struct ColorworkApp: App {
         .windowStyle(.titleBar)
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1000, height: 700)
+        .commands { ColorworkCommands() }
         #endif
     }
 }

@@ -52,11 +52,8 @@ struct PatternEditorView: View {
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Generate") { doc.generate() }
-                    .keyboardShortcut("g", modifiers: .command)
                 Button("Clear")    { doc.clear() }
                 Button("", systemImage: "arrow.up.left.and.arrow.down.right") { doc.fitCellSize() }
-                Button("Export…")  { export() }
-                    .keyboardShortcut("e", modifiers: [.command, .shift])
             }
         }
     }

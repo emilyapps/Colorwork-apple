@@ -45,7 +45,7 @@ enum ExportPanel {
 // MARK: - Format handler
 
 private final class ExportFormatHandler: NSObject {
-    static var retainKey = "ExportFormatHandler"
+    static var retainKey: UInt8 = 0
 
     private weak var panel: NSSavePanel?
     private weak var popup: NSPopUpButton?

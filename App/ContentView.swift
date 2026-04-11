@@ -16,6 +16,9 @@ struct WindowRootView: View {
                 undoManager.levelsOfUndo = 50
                 document.undoManager = undoManager
             }
+            #if os(macOS)
+            .focusedSceneValue(\.patternDocument, document)
+            #endif
     }
 }
 
@@ -43,6 +46,16 @@ struct ContentView: View {
                     saveLoadMenu
                 }
             }
+            .focusedSceneValue(\.savePatternAction, {
+                saveName = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
+                saveType = .pattern
+                showSaveAlert = true
+            })
+            .focusedSceneValue(\.saveProjectAction, {
+                saveName = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
+                saveType = .project
+                showSaveAlert = true
+            })
     }
     #endif
 

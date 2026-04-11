@@ -44,7 +44,7 @@ struct SidebarView: View {
 
 struct ColorsSidebarView: View {
     @Environment(PatternDocument.self) var doc
-    @State private var colorTab  = 0          // 0=Palette, 1=Sliders
+    @State private var colorTab  = 1          // 0=Sliders, 1=Palette
     @State private var activeTarget = ColorTarget.fill
 
     enum ColorTarget { case fill, bg }
@@ -78,17 +78,17 @@ struct ColorsSidebarView: View {
 
                 // Sliders / Palette pill tabs
                 Picker("", selection: $colorTab) {
-                    Text("Palette").tag(0)
-                    Text("Sliders").tag(1)
+                    Text("Sliders").tag(0)
+                    Text("Palette").tag(1)
                 }
                 .pickerStyle(.segmented)
 
                 if colorTab == 0 {
-                    NamedPaletteView(target: activeTarget == .fill ? .fill : .bg)
-                        .frame(height: 240)
-                } else {
                     CMYKSlidersView(colorState: activeColor, label: "CMYK")
                     HSLSlidersView(colorState: activeColor, label: "HSL")
+                } else {
+                    NamedPaletteView(target: activeTarget == .fill ? .fill : .bg)
+                        .frame(height: 240)
                 }
 
                 Divider()
@@ -168,13 +168,10 @@ struct SaveLoadSidebarView: View {
                         PatternStore(context: modelContext).loadPattern(p, into: doc)
                         statusMsg = "Loaded \(p.name)"
                     } label: {
-                        HStack(spacing: 6) {
-                            thumbView(p.thumbnailData, size: 36)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(p.name).font(.system(size: 12, weight: .semibold))
-                                Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
-                                    .font(.system(size: 10)).foregroundStyle(.secondary)
-                            }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(p.name).font(.system(size: 12, weight: .semibold))
+                            Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
+                                .font(.system(size: 10)).foregroundStyle(.secondary)
                         }
                     }
                     .buttonStyle(.plain)
@@ -271,29 +268,6 @@ struct SaveLoadSidebarView: View {
     }
 
     // MARK: Helpers
-
-    @ViewBuilder
-    private func thumbView(_ data: Data?, size: CGFloat) -> some View {
-        Group {
-            #if os(macOS)
-            if let d = data, let img = NSImage(data: d) {
-                Image(nsImage: img).resizable().scaledToFit()
-            } else { placeholderThumb }
-            #else
-            if let d = data, let img = UIImage(data: d) {
-                Image(uiImage: img).resizable().scaledToFit()
-            } else { placeholderThumb }
-            #endif
-        }
-        .frame(width: size, height: size)
-        .cornerRadius(3)
-    }
-
-    private var placeholderThumb: some View {
-        RoundedRectangle(cornerRadius: 3)
-            .fill(Color.secondary.opacity(0.2))
-            .overlay(Image(systemName: "squareshape.split.3x3").foregroundStyle(.secondary))
-    }
 
     private func shortDate(_ date: Date) -> String {
         let f = DateFormatter()
