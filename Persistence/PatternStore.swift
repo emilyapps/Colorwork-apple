@@ -19,12 +19,8 @@ final class PatternStore {
     // MARK: - Patterns
 
     func savePattern(from doc: PatternDocument, name: String) throws {
-        let gridData      = try encoder.encode(doc.grid)
-        let colStripData  = try? encoder.encode(doc.colStrip)
-        let rowStripData  = try? encoder.encode(doc.rowStrip)
-        let cornerData    = try? encoder.encode(doc.corner)
-        let tilingData    = try? encoder.encode(doc.tiling)
-
+        let gridData = try encoder.encode(doc.grid)
+        // Patterns store tile-only — no strips or tiling settings
         let thumb = Self.makeThumbnail(
             grid: doc.grid, H: doc.H, W: doc.W,
             fillHex: doc.fillColor.hex, bgHex: doc.bgColor.hex)
@@ -38,10 +34,10 @@ final class PatternStore {
             bgColor:       doc.bgColor.hex,
             fillDensity:   doc.density,
             gridData:      gridData,
-            colStripData:  colStripData,
-            rowStripData:  rowStripData,
-            cornerData:    cornerData,
-            tilingData:    tilingData)
+            colStripData:  nil,
+            rowStripData:  nil,
+            cornerData:    nil,
+            tilingData:    nil)
         pattern.thumbnailData = thumb
         context.insert(pattern)
         try context.save()
@@ -49,23 +45,20 @@ final class PatternStore {
 
     func loadPattern(_ pattern: SDPattern, into doc: PatternDocument) {
         guard let grid = try? decoder.decode([[Bool]].self, from: pattern.gridData) else { return }
-        let colStrip = (pattern.colStripData).flatMap { try? decoder.decode([[Bool]].self, from: $0) }
-        let rowStrip = (pattern.rowStripData).flatMap { try? decoder.decode([[Bool]].self, from: $0) }
-        let corner   = (pattern.cornerData  ).flatMap { try? decoder.decode([[Bool]].self, from: $0) }
-        let tiling   = (pattern.tilingData  ).flatMap { try? decoder.decode(TilingSettings.self, from: $0) }
 
         doc.H             = pattern.gridH
         doc.W             = pattern.gridW
         doc.symmetryGroup = SymmetryGroup(rawValue: pattern.symmetryGroup) ?? .d4
         doc.grid          = grid
-        doc.colStrip      = colStrip ?? PatternEngine.emptyStrip(rows: pattern.gridH, cols: tiling?.stripWidth ?? 1)
-        doc.rowStrip      = rowStrip ?? PatternEngine.emptyStrip(rows: tiling?.stripWidth ?? 1, cols: pattern.gridW)
-        doc.corner        = corner   ?? PatternEngine.emptyStrip(rows: tiling?.stripWidth ?? 1, cols: tiling?.stripWidth ?? 1)
-        if let t = tiling { doc.tiling = t }
         doc.density       = pattern.fillDensity
         doc.fillColor.setHex(pattern.fillColor)
         doc.bgColor.setHex(pattern.bgColor)
         doc.currentPatternName = pattern.name
+        // Patterns are tile-only — reset strips to empty, preserve current tiling settings
+        let sw = doc.tiling.stripWidth
+        doc.colStrip = PatternEngine.emptyStrip(rows: pattern.gridH, cols: sw)
+        doc.rowStrip = PatternEngine.emptyStrip(rows: sw, cols: pattern.gridW)
+        doc.corner   = PatternEngine.emptyStrip(rows: sw, cols: sw)
 
         doc.regenerateDomain()
         doc.rebuildDescriptors()

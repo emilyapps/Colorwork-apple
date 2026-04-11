@@ -10,6 +10,9 @@ struct LabeledSliderView: View {
     let step:       Double
     @Binding var value: Double
 
+    @State  private var textInput:  String = ""
+    @FocusState private var focused: Bool
+
     var body: some View {
         HStack(spacing: 6) {
             Text(label)
@@ -23,28 +26,43 @@ struct LabeledSliderView: View {
             Text(formatMax)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
-            TextField("", value: $value, formatter: formatter)
+            TextField("", text: $textInput)
                 .font(.system(size: 11, design: .monospaced))
                 .frame(width: 42)
                 #if os(iOS)
                 .keyboardType(.decimalPad)
                 #endif
                 .multilineTextAlignment(.trailing)
-                .onChange(of: value) { _, v in
-                    value = min(range.upperBound, max(range.lowerBound, v))
+                .focused($focused)
+                .onSubmit  { commit() }
+                .onChange(of: focused) { _, isNowFocused in
+                    if isNowFocused {
+                        textInput = formatValue(value)   // show current value when entering field
+                    } else {
+                        commit()                          // parse + clamp when leaving field
+                    }
                 }
+                .onChange(of: value) { _, v in
+                    if !focused { textInput = formatValue(v) }  // keep in sync when slider moves
+                }
+                .onAppear { textInput = formatValue(value) }
         }
+    }
+
+    private func commit() {
+        let parsed = step < 1 ? Double(textInput) : Double(textInput).map { Double(Int($0.rounded())) }
+        if let d = parsed {
+            value = min(range.upperBound, max(range.lowerBound, d))
+        }
+        textInput = formatValue(value)
+    }
+
+    private func formatValue(_ v: Double) -> String {
+        step < 1 ? String(format: "%.2f", v) : "\(Int(v.rounded()))"
     }
 
     private var formatMin: String { step >= 1 ? "\(Int(range.lowerBound))" : String(format: "%.2f", range.lowerBound) }
     private var formatMax: String { step >= 1 ? "\(Int(range.upperBound))" : String(format: "%.2f", range.upperBound) }
-
-    private var formatter: NumberFormatter {
-        let f = NumberFormatter()
-        f.minimumFractionDigits = step < 1 ? 2 : 0
-        f.maximumFractionDigits = step < 1 ? 2 : 0
-        return f
-    }
 }
 
 // MARK: - Integer convenience

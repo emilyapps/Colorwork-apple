@@ -12,8 +12,8 @@ final class PatternDocument {
 
     // MARK: - Grid state
     var grid:   [[Bool]] = []
-    var H: Int = 8 { didSet { if !isMutatingInternally && oldValue != H { pushUndo("Resize Grid") } } }
-    var W: Int = 8 { didSet { if !isMutatingInternally && oldValue != W { pushUndo("Resize Grid") } } }
+    var H: Int = 8 { didSet { if !isMutatingInternally && oldValue != H { pushUndo("Resize Grid") }}}
+    var W: Int = 8 { didSet { if !isMutatingInternally && oldValue != W { pushUndo("Resize Grid") }}}
 
     var symmetryGroup: SymmetryGroup = .d4 {
         didSet {

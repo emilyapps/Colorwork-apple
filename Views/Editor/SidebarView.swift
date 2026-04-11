@@ -140,6 +140,11 @@ struct SaveLoadSidebarView: View {
     @State private var saveName    = ""
     @State private var statusMsg   = ""
 
+    @State private var patternPendingDelete:  SDPattern? = nil
+    @State private var projectPendingDelete:  SDProject? = nil
+    @State private var lastLoadedPatternID:   UUID?      = nil
+    @State private var lastLoadedProjectID:   UUID?      = nil
+
     @Query(sort: \SDPattern.createdAt, order: .reverse) var patterns: [SDPattern]
     @Query(sort: \SDProject.createdAt, order: .reverse) var projects: [SDProject]
 
@@ -166,21 +171,38 @@ struct SaveLoadSidebarView: View {
                 ForEach(patterns) { p in
                     Button {
                         PatternStore(context: modelContext).loadPattern(p, into: doc)
+                        lastLoadedPatternID = p.id
+                        lastLoadedProjectID = nil
                         statusMsg = "Loaded \(p.name)"
                     } label: {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(p.name).font(.system(size: 12, weight: .semibold))
-                            Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
-                                .font(.system(size: 10)).foregroundStyle(.secondary)
-                        }
+                        patternRowLabel(p)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            patternPendingDelete = p
+                        } label: { Label("Delete", systemImage: "trash") }
+                    }
                 }
                 .onDelete { idxs in
-                    for i in idxs { try? PatternStore(context: modelContext).deletePattern(patterns[i]) }
+                    if let i = idxs.first { patternPendingDelete = patterns[i] }
                 }
             }
             .frame(minHeight: 120, maxHeight: 200)
+            .confirmationDialog(
+                "Delete \"\(patternPendingDelete?.name ?? "")\"?",
+                isPresented: Binding(
+                    get: { patternPendingDelete != nil },
+                    set: { if !$0 { patternPendingDelete = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let p = patternPendingDelete {
+                        try? PatternStore(context: modelContext).deletePattern(p)
+                    }
+                    patternPendingDelete = nil
+                }
+            }
 
             Divider()
 
@@ -221,20 +243,38 @@ struct SaveLoadSidebarView: View {
                 ForEach(projects) { p in
                     Button {
                         try? PatternStore(context: modelContext).loadProject(p, into: doc)
+                        lastLoadedProjectID = p.id
+                        lastLoadedPatternID = nil
                         statusMsg = "Loaded \(p.name)"
                     } label: {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(p.name).font(.system(size: 12, weight: .semibold))
-                            Text(shortDate(p.createdAt)).font(.system(size: 10)).foregroundStyle(.secondary)
-                        }
+                        projectRowLabel(p)
                     }
                     .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(role: .destructive) {
+                            projectPendingDelete = p
+                        } label: { Label("Delete", systemImage: "trash") }
+                    }
                 }
                 .onDelete { idxs in
-                    for i in idxs { try? PatternStore(context: modelContext).deleteProject(projects[i]) }
+                    if let i = idxs.first { projectPendingDelete = projects[i] }
                 }
             }
             .frame(minHeight: 120, maxHeight: 200)
+            .confirmationDialog(
+                "Delete \"\(projectPendingDelete?.name ?? "")\"?",
+                isPresented: Binding(
+                    get: { projectPendingDelete != nil },
+                    set: { if !$0 { projectPendingDelete = nil } }),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let p = projectPendingDelete {
+                        try? PatternStore(context: modelContext).deleteProject(p)
+                    }
+                    projectPendingDelete = nil
+                }
+            }
 
             Divider()
 
@@ -268,6 +308,56 @@ struct SaveLoadSidebarView: View {
     }
 
     // MARK: Helpers
+
+    private func patternRowLabel(_ p: SDPattern) -> some View {
+        HStack(spacing: 8) {
+            thumbView(p.thumbnailData, size: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(p.name).font(.system(size: 12, weight: .semibold))
+                Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if p.id == lastLoadedPatternID {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+        }
+    }
+
+    private func projectRowLabel(_ p: SDProject) -> some View {
+        HStack(spacing: 8) {
+            thumbView(p.thumbnailData, size: 36)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(p.name).font(.system(size: 12, weight: .semibold))
+                Text(shortDate(p.createdAt)).font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            if p.id == lastLoadedProjectID {
+                Image(systemName: "checkmark")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 11, weight: .semibold))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func thumbView(_ data: Data?, size: CGFloat) -> some View {
+        Group {
+            if let d = data, let img = NSImage(data: d) {
+                Image(nsImage: img).resizable().scaledToFit()
+            } else { placeholderThumb }
+        }
+        .frame(width: size, height: size)
+        .cornerRadius(4)
+    }
+
+    private var placeholderThumb: some View {
+        RoundedRectangle(cornerRadius: 4)
+            .fill(Color.secondary.opacity(0.2))
+            .overlay(Image(systemName: "squareshape.split.3x3").foregroundStyle(.secondary))
+    }
 
     private func shortDate(_ date: Date) -> String {
         let f = DateFormatter()
