@@ -65,7 +65,6 @@
 		C87A4F2F2F853B5200F12544 /* ColorworkUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ColorworkUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C87A4F902F85EA2100F12544 /* ColorworkApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkApp.swift; sourceTree = "<group>"; };
 		C87A4F912F85EA2100F12544 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkCommands.swift; sourceTree = "<group>"; };
 		C87A4FA02F85EAAF00F12544 /* ColorMath.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorMath.swift; sourceTree = "<group>"; };
 		C87A4FA12F85EAAF00F12544 /* PatternEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternEngine.swift; sourceTree = "<group>"; };
 		C87A4FA22F85EAAF00F12544 /* RenderDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RenderDescriptor.swift; sourceTree = "<group>"; };
@@ -89,9 +88,10 @@
 		C87A4FBB2F85EAAF00F12544 /* LabeledSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LabeledSliderView.swift; sourceTree = "<group>"; };
 		C87A4FBD2F85EAAF00F12544 /* TilingPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilingPreviewView.swift; sourceTree = "<group>"; };
 		C87A4FBE2F85EAAF00F12544 /* TilingSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TilingSettingsView.swift; sourceTree = "<group>"; };
-		C87A4FD82F85F69C00F12544 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SidebarView.swift"; sourceTree = "<group>"; };
+		C87A4FD82F85F69C00F12544 /* SidebarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarView.swift; sourceTree = "<group>"; };
 		C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter.swift; sourceTree = "<group>"; };
 		C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPanel.swift; sourceTree = "<group>"; };
+		C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkCommands.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -641,10 +641,12 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Colorwork/Colorwork.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Colorwork/ColorworkRelease.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 743DWCGB58;
+				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;

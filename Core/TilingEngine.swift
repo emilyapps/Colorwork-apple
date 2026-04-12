@@ -17,6 +17,28 @@ enum TilingEngine {
 
     // MARK: transformed_tile
 
+    /// Compute the flipR/flipC flags for repeat position (hi, vi).
+    private static func flipFlags(
+        hType: RepeatType, vType: RepeatType,
+        hi: Int, vi: Int
+    ) -> (flipR: Bool, flipC: Bool) {
+        var flipR = false
+        var flipC = false
+        if hType == .reflection && hi % 2 == 1 {
+            flipC.toggle()
+        } else if hType == .rotation && hi % 2 == 1 {
+            flipR.toggle()
+            flipC.toggle()
+        }
+        if vType == .reflection && vi % 2 == 1 {
+            flipR.toggle()
+        } else if vType == .rotation && vi % 2 == 1 {
+            flipR.toggle()
+            flipC.toggle()
+        }
+        return (flipR, flipC)
+    }
+
     /// Return the tile (possibly flipped) for repeat position (hi, vi).
     /// Port of pattern_core.py:transformed_tile
     static func transformedTile(
@@ -25,23 +47,7 @@ enum TilingEngine {
         hType: RepeatType, vType: RepeatType,
         hi: Int, vi: Int
     ) -> [[Bool]] {
-        var flipR = false
-        var flipC = false
-
-        if hType == .reflection && hi % 2 == 1 {
-            flipC.toggle()
-        } else if hType == .rotation && hi % 2 == 1 {
-            flipR.toggle()
-            flipC.toggle()
-        }
-
-        if vType == .reflection && vi % 2 == 1 {
-            flipR.toggle()
-        } else if vType == .rotation && vi % 2 == 1 {
-            flipR.toggle()
-            flipC.toggle()
-        }
-
+        let (flipR, flipC) = flipFlags(hType: hType, vType: vType, hi: hi, vi: vi)
         guard flipR || flipC else { return tile }
 
         var result = Array(repeating: Array(repeating: false, count: W), count: H)
@@ -97,6 +103,7 @@ enum TilingEngine {
                 if y0 >= totalH || y0 + uh <= 0 { continue }
 
                 let t = transformedTile(tile, H: H, W: W, hType: hType, vType: vType, hi: hi, vi: vi)
+                let (flipR, flipC) = flipFlags(hType: hType, vType: vType, hi: hi, vi: vi)
 
                 for r in 0 ..< H {
                     for c in 0 ..< W {
@@ -106,21 +113,24 @@ enum TilingEngine {
                 if hRepeat && sw > 0 {
                     for r in 0 ..< H {
                         for sc in 0 ..< sw {
-                            set(y0 + r, x0 + W + sc, get(colStrip, r, sc))
+                            set(y0 + r, x0 + W + sc,
+                                get(colStrip, flipR ? H-1-r : r, flipC ? sw-1-sc : sc))
                         }
                     }
                 }
                 if vRepeat && sw > 0 {
                     for sr in 0 ..< sw {
                         for c in 0 ..< W {
-                            set(y0 + H + sr, x0 + c, get(rowStrip, sr, c))
+                            set(y0 + H + sr, x0 + c,
+                                get(rowStrip, flipR ? sw-1-sr : sr, flipC ? W-1-c : c))
                         }
                     }
                 }
                 if hRepeat && vRepeat && sw > 0 {
                     for sr in 0 ..< sw {
                         for sc in 0 ..< sw {
-                            set(y0 + H + sr, x0 + W + sc, get(corner, sr, sc))
+                            set(y0 + H + sr, x0 + W + sc,
+                                get(corner, flipR ? sw-1-sr : sr, flipC ? sw-1-sc : sc))
                         }
                     }
                 }
