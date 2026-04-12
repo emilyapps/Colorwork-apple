@@ -22,7 +22,22 @@ struct ControlPanelView: View {
                     .labelsHidden()
                     .frame(maxWidth: 140)
                 }
-                Toggle("Reflect", isOn: reflectBinding)
+                if doc.symmetryGroup.rotationFactor == 1 {
+                    HStack {
+                        Text("Reflect")
+                        Spacer()
+                        Picker("Reflect", selection: axisBinding) {
+                            Text("None").tag(SymmetryGroup.ReflectionAxis.none)
+                            Text("V").tag(SymmetryGroup.ReflectionAxis.vertical)
+                            Text("H").tag(SymmetryGroup.ReflectionAxis.horizontal)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .frame(maxWidth: 140)
+                    }
+                } else {
+                    Toggle("Reflect", isOn: reflectBinding)
+                }
                 Text(doc.symmetryGroup.displayName)
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
@@ -59,12 +74,18 @@ struct ControlPanelView: View {
     private var rotationBinding: Binding<Int> {
         Binding(
             get: { doc.symmetryGroup.rotationFactor },
-            set: { doc.symmetryGroup = SymmetryGroup.from(rotation: $0, reflection: doc.symmetryGroup.hasReflection) })
+            set: { doc.symmetryGroup = SymmetryGroup.from(rotation: $0, axis: doc.symmetryGroup.reflectionAxis) })
     }
 
     private var reflectBinding: Binding<Bool> {
         Binding(
             get: { doc.symmetryGroup.hasReflection },
             set: { doc.symmetryGroup = SymmetryGroup.from(rotation: doc.symmetryGroup.rotationFactor, reflection: $0) })
+    }
+
+    private var axisBinding: Binding<SymmetryGroup.ReflectionAxis> {
+        Binding(
+            get: { doc.symmetryGroup.reflectionAxis },
+            set: { doc.symmetryGroup = SymmetryGroup.from(rotation: 1, axis: $0) })
     }
 }

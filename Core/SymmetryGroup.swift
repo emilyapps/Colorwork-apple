@@ -22,7 +22,7 @@ enum CellRegion: String, Codable {
 // MARK: - SymmetryGroup
 
 enum SymmetryGroup: String, CaseIterable, Codable {
-    case c1, d1, c2, d2, c4, d4
+    case c1, d1, d1h, c2, d2, c4, d4
 
     // MARK: Orbit — returns all cells equivalent to (r,c) under this group
     func orbit(_ r: Int, _ c: Int, H: Int, W: Int) -> Set<CellIndex> {
@@ -34,6 +34,10 @@ enum SymmetryGroup: String, CaseIterable, Codable {
         case .d1:
             return [CellIndex(row: r, col: c),
                     CellIndex(row: r, col: W - 1 - c)]
+
+        case .d1h:
+            return [CellIndex(row: r,     col: c),
+                    CellIndex(row: H-1-r, col: c)]
 
         case .c2:
             return [CellIndex(row: r,     col: c),
@@ -67,16 +71,16 @@ enum SymmetryGroup: String, CaseIterable, Codable {
 
     var rotationFactor: Int {
         switch self {
-        case .c1, .d1: return 1
-        case .c2, .d2: return 2
-        case .c4, .d4: return 4
+        case .c1, .d1, .d1h: return 1
+        case .c2, .d2:        return 2
+        case .c4, .d4:        return 4
         }
     }
 
     var hasReflection: Bool {
         switch self {
-        case .c1, .c2, .c4: return false
-        case .d1, .d2, .d4: return true
+        case .c1, .c2, .c4:    return false
+        case .d1, .d1h, .d2, .d4: return true
         }
     }
 
@@ -85,16 +89,41 @@ enum SymmetryGroup: String, CaseIterable, Codable {
         self == .c4 || self == .d4
     }
 
-    var displayName: String { rawValue.uppercased() }
-
-    static func from(rotation: Int, reflection: Bool) -> SymmetryGroup {
-        switch (rotation, reflection) {
-        case (1, false): return .c1
-        case (1, true):  return .d1
-        case (2, false): return .c2
-        case (2, true):  return .d2
-        case (4, false): return .c4
-        default:         return .d4
+    var displayName: String {
+        switch self {
+        case .d1:  return "D1V"
+        case .d1h: return "D1H"
+        default:   return rawValue.uppercased()
         }
+    }
+
+    // MARK: Reflection axis
+
+    enum ReflectionAxis { case none, vertical, horizontal }
+
+    var reflectionAxis: ReflectionAxis {
+        switch self {
+        case .d1:            return .vertical
+        case .d1h:           return .horizontal
+        case .c1, .c2, .c4: return .none
+        case .d2, .d4:       return .vertical   // both axes; .vertical as representative
+        }
+    }
+
+    static func from(rotation: Int, axis: ReflectionAxis) -> SymmetryGroup {
+        switch (rotation, axis) {
+        case (1, .none):       return .c1
+        case (1, .vertical):   return .d1
+        case (1, .horizontal): return .d1h
+        case (2, .none):       return .c2
+        case (2, _):           return .d2
+        case (4, .none):       return .c4
+        default:               return .d4
+        }
+    }
+
+    // Legacy — kept for any call sites that use Bool reflection
+    static func from(rotation: Int, reflection: Bool) -> SymmetryGroup {
+        from(rotation: rotation, axis: reflection ? .vertical : .none)
     }
 }
