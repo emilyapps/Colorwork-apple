@@ -148,8 +148,10 @@ struct LibraryView: View {
     @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
 
-    @Query(sort: \SDPattern.createdAt, order: .reverse) var patterns: [SDPattern]
-    @Query(sort: \SDProject.createdAt, order: .reverse) var projects: [SDProject]
+    @Query(sort: [SortDescriptor(\SDPattern.sortOrder),
+                  SortDescriptor(\SDPattern.createdAt, order: .reverse)]) var patterns: [SDPattern]
+    @Query(sort: [SortDescriptor(\SDProject.sortOrder),
+                  SortDescriptor(\SDProject.createdAt, order: .reverse)]) var projects: [SDProject]
 
     @State private var selectedTab = 0
     @State private var saveName    = ""
@@ -175,6 +177,9 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("Library")
+        #if os(iOS)
+        .toolbar { EditButton() }
+        #endif
     }
 
     private var patternList: some View {
@@ -204,6 +209,7 @@ struct LibraryView: View {
                 .onDelete { idxs in
                     if let i = idxs.first { patternPendingDelete = patterns[i] }
                 }
+                .onMove(perform: movePatterns)
             }
 
             Divider()
@@ -270,6 +276,7 @@ struct LibraryView: View {
                 .onDelete { idxs in
                     if let i = idxs.first { projectPendingDelete = projects[i] }
                 }
+                .onMove(perform: moveProjects)
             }
 
             Divider()
@@ -328,6 +335,20 @@ struct LibraryView: View {
         RoundedRectangle(cornerRadius: 4)
             .fill(Color.secondary.opacity(0.2))
             .overlay(Image(systemName: "squareshape.split.3x3").foregroundStyle(.secondary))
+    }
+
+    private func movePatterns(from offsets: IndexSet, to destination: Int) {
+        var reordered = patterns
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (idx, p) in reordered.enumerated() { p.sortOrder = idx }
+        try? modelContext.save()
+    }
+
+    private func moveProjects(from offsets: IndexSet, to destination: Int) {
+        var reordered = projects
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (idx, p) in reordered.enumerated() { p.sortOrder = idx }
+        try? modelContext.save()
     }
 
     private func dateString(_ date: Date) -> String {

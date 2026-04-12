@@ -12,6 +12,7 @@ final class SDPattern {
     var id:             UUID    = UUID()
     var name:           String  = ""
     var createdAt:      Date    = Date()
+    var sortOrder:      Int     = 0
     var gridW:          Int     = 0
     var gridH:          Int     = 0
     var symmetryGroup:  String  = "d4"
@@ -53,6 +54,7 @@ final class SDProject {
     var id:        UUID   = UUID()
     var name:      String = ""
     var createdAt: Date   = Date()
+    var sortOrder: Int    = 0
     var data:      Data   = Data()   // JSONEncoder(PatternSnapshot)
 
     var thumbnailData: Data? = nil

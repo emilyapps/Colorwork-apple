@@ -326,6 +326,7 @@ struct PatternSnapshot: Codable {
         doc.symmetryGroup = symmetryGroup
         doc.isMutatingInternally = false
         doc.grid          = grid
+        doc.tiling        = tiling    // must precede strips — didSet calls resetStrips() if stripWidth changed
         doc.colStrip      = colStrip
         doc.rowStrip      = rowStrip
         doc.corner        = corner
@@ -334,7 +335,6 @@ struct PatternSnapshot: Codable {
         doc.showDomain    = showDomain
         doc.fillColor.setHex(fillHex)
         doc.bgColor.setHex(bgHex)
-        doc.tiling        = tiling
         // Recompute domain from loaded grid dimensions + symmetry
         doc.regenerateDomain()
         doc.rebuildDescriptors()

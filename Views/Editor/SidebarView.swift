@@ -145,8 +145,10 @@ struct SaveLoadSidebarView: View {
     @State private var lastLoadedPatternID:   UUID?      = nil
     @State private var lastLoadedProjectID:   UUID?      = nil
 
-    @Query(sort: \SDPattern.createdAt, order: .reverse) var patterns: [SDPattern]
-    @Query(sort: \SDProject.createdAt, order: .reverse) var projects: [SDProject]
+    @Query(sort: [SortDescriptor(\SDPattern.sortOrder),
+                  SortDescriptor(\SDPattern.createdAt, order: .reverse)]) var patterns: [SDPattern]
+    @Query(sort: [SortDescriptor(\SDProject.sortOrder),
+                  SortDescriptor(\SDProject.createdAt, order: .reverse)]) var projects: [SDProject]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -169,26 +171,35 @@ struct SaveLoadSidebarView: View {
         VStack(alignment: .leading, spacing: 6) {
             List {
                 ForEach(patterns) { p in
-                    Button {
-                        PatternStore(context: modelContext).loadPattern(p, into: doc)
-                        lastLoadedPatternID = p.id
-                        lastLoadedProjectID = nil
-                        statusMsg = "Loaded \(p.name)"
-                    } label: {
-                        patternRowLabel(p)
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            patternPendingDelete = p
-                        } label: { Label("Delete", systemImage: "trash") }
-                    }
+                    patternRowLabel(p)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            PatternStore(context: modelContext).loadPattern(p, into: doc)
+                            lastLoadedPatternID = p.id
+                            lastLoadedProjectID = nil
+                            statusMsg = "Loaded \(p.name)"
+                        }
+                        .draggable(p.id.uuidString)
+                        .dropDestination(for: String.self) { droppedIDs, _ in
+                            guard let droppedID = droppedIDs.first,
+                                  let from = patterns.firstIndex(where: { $0.id.uuidString == droppedID }),
+                                  let to   = patterns.firstIndex(where: { $0.id == p.id }),
+                                  from != to else { return false }
+                            movePatterns(from: IndexSet(integer: from),
+                                         to: from < to ? to + 1 : to)
+                            return true
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                patternPendingDelete = p
+                            } label: { Label("Delete", systemImage: "trash") }
+                        }
                 }
                 .onDelete { idxs in
                     if let i = idxs.first { patternPendingDelete = patterns[i] }
                 }
             }
-            .frame(minHeight: 120, maxHeight: 200)
+            .frame(maxHeight: .infinity)
             .confirmationDialog(
                 "Delete \"\(patternPendingDelete?.name ?? "")\"?",
                 isPresented: Binding(
@@ -241,26 +252,35 @@ struct SaveLoadSidebarView: View {
         VStack(alignment: .leading, spacing: 6) {
             List {
                 ForEach(projects) { p in
-                    Button {
-                        try? PatternStore(context: modelContext).loadProject(p, into: doc)
-                        lastLoadedProjectID = p.id
-                        lastLoadedPatternID = nil
-                        statusMsg = "Loaded \(p.name)"
-                    } label: {
-                        projectRowLabel(p)
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            projectPendingDelete = p
-                        } label: { Label("Delete", systemImage: "trash") }
-                    }
+                    projectRowLabel(p)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            try? PatternStore(context: modelContext).loadProject(p, into: doc)
+                            lastLoadedProjectID = p.id
+                            lastLoadedPatternID = nil
+                            statusMsg = "Loaded \(p.name)"
+                        }
+                        .draggable(p.id.uuidString)
+                        .dropDestination(for: String.self) { droppedIDs, _ in
+                            guard let droppedID = droppedIDs.first,
+                                  let from = projects.firstIndex(where: { $0.id.uuidString == droppedID }),
+                                  let to   = projects.firstIndex(where: { $0.id == p.id }),
+                                  from != to else { return false }
+                            moveProjects(from: IndexSet(integer: from),
+                                         to: from < to ? to + 1 : to)
+                            return true
+                        }
+                        .contextMenu {
+                            Button(role: .destructive) {
+                                projectPendingDelete = p
+                            } label: { Label("Delete", systemImage: "trash") }
+                        }
                 }
                 .onDelete { idxs in
                     if let i = idxs.first { projectPendingDelete = projects[i] }
                 }
             }
-            .frame(minHeight: 120, maxHeight: 200)
+            .frame(maxHeight: .infinity)
             .confirmationDialog(
                 "Delete \"\(projectPendingDelete?.name ?? "")\"?",
                 isPresented: Binding(
@@ -363,6 +383,20 @@ struct SaveLoadSidebarView: View {
         let f = DateFormatter()
         f.dateStyle = .short; f.timeStyle = .short
         return f.string(from: date)
+    }
+
+    private func movePatterns(from offsets: IndexSet, to destination: Int) {
+        var reordered = patterns
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (idx, p) in reordered.enumerated() { p.sortOrder = idx }
+        try? modelContext.save()
+    }
+
+    private func moveProjects(from offsets: IndexSet, to destination: Int) {
+        var reordered = projects
+        reordered.move(fromOffsets: offsets, toOffset: destination)
+        for (idx, p) in reordered.enumerated() { p.sortOrder = idx }
+        try? modelContext.save()
     }
 
     private func export() {
