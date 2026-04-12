@@ -365,9 +365,15 @@ struct SaveLoadSidebarView: View {
     @ViewBuilder
     private func thumbView(_ data: Data?, size: CGFloat) -> some View {
         Group {
+            #if os(macOS)
             if let d = data, let img = NSImage(data: d) {
                 Image(nsImage: img).resizable().scaledToFit()
             } else { placeholderThumb }
+            #else
+            if let d = data, let img = UIImage(data: d) {
+                Image(uiImage: img).resizable().scaledToFit()
+            } else { placeholderThumb }
+            #endif
         }
         .frame(width: size, height: size)
         .cornerRadius(4)
