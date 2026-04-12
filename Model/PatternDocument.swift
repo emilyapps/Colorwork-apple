@@ -12,8 +12,20 @@ final class PatternDocument {
 
     // MARK: - Grid state
     var grid:   [[Bool]] = []
-    var H: Int = 8 { didSet { if !isMutatingInternally && oldValue != H { pushUndo("Resize Grid") }}}
-    var W: Int = 8 { didSet { if !isMutatingInternally && oldValue != W { pushUndo("Resize Grid") }}}
+    var H: Int = 8 {
+        didSet {
+            guard oldValue != H, !isMutatingInternally else { return }
+            pushUndo("Resize Grid")
+            resizeGrid()
+        }
+    }
+    var W: Int = 8 {
+        didSet {
+            guard oldValue != W, !isMutatingInternally else { return }
+            pushUndo("Resize Grid")
+            resizeGrid()
+        }
+    }
 
     var symmetryGroup: SymmetryGroup = .d4 {
         didSet {
@@ -23,11 +35,11 @@ final class PatternDocument {
                 W = H
                 isMutatingInternally = false
             }
-            regenerateDomain()
+            resizeGrid()
         }
     }
 
-    private var isMutatingInternally = false
+    fileprivate var isMutatingInternally = false
 
     private(set) var domainCells:    [CellIndex] = []
     private(set) var domainSet:      Set<CellIndex> = []
@@ -174,6 +186,23 @@ final class PatternDocument {
         cellToCanonical = result.canonical
     }
 
+    private func resizeGrid() {
+        let oldRows = grid.count
+        let oldCols = grid.first?.count ?? 0
+        if oldRows != H || oldCols != W {
+            grid = (0 ..< H).map { r in
+                (0 ..< W).map { c in
+                    r < oldRows && c < oldCols ? grid[r][c] : false
+                }
+            }
+            resetStrips()
+        }
+        regenerateDomain()
+        fitCellSize()
+        rebuildDescriptors()
+        isDirty = true
+    }
+
     private func resetStrips() {
         let sw = max(0, tiling.stripWidth)
         colStrip = PatternEngine.emptyStrip(rows: H, cols: sw)
@@ -291,9 +320,11 @@ struct PatternSnapshot: Codable {
     }
 
     func apply(to doc: PatternDocument) {
+        doc.isMutatingInternally = true
         doc.H             = H
         doc.W             = W
         doc.symmetryGroup = symmetryGroup
+        doc.isMutatingInternally = false
         doc.grid          = grid
         doc.colStrip      = colStrip
         doc.rowStrip      = rowStrip
