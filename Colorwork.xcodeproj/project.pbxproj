@@ -38,6 +38,8 @@
 		C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */; };
 		C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */; };
 		C87A4FF02F86EAAF00F12544 /* ColorworkCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */; };
+		C8C336D72F908136001B002A /* PatternClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C336D62F908136001B002A /* PatternClass.swift */; };
+		C8C336D92F908A62001B002A /* PathRasterizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C336D82F908A62001B002A /* PathRasterizer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -92,6 +94,8 @@
 		C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter.swift; sourceTree = "<group>"; };
 		C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPanel.swift; sourceTree = "<group>"; };
 		C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkCommands.swift; sourceTree = "<group>"; };
+		C8C336D62F908136001B002A /* PatternClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternClass.swift; sourceTree = "<group>"; };
+		C8C336D82F908A62001B002A /* PathRasterizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PathRasterizer.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -182,6 +186,8 @@
 				C87A4FA22F85EAAF00F12544 /* RenderDescriptor.swift */,
 				C87A4FA32F85EAAF00F12544 /* SymmetryGroup.swift */,
 				C87A4FA42F85EAAF00F12544 /* TilingEngine.swift */,
+				C8C336D62F908136001B002A /* PatternClass.swift */,
+				C8C336D82F908A62001B002A /* PathRasterizer.swift */,
 			);
 			path = Core;
 			sourceTree = "<group>";
@@ -432,6 +438,7 @@
 				C87A4FC92F85EAAF00F12544 /* HSLSlidersView.swift in Sources */,
 				C87A4FCA2F85EAAF00F12544 /* NamedPaletteView.swift in Sources */,
 				C87A4FCB2F85EAAF00F12544 /* TilingEngine.swift in Sources */,
+				C8C336D72F908136001B002A /* PatternClass.swift in Sources */,
 				C87A4FCC2F85EAAF00F12544 /* LabeledSliderView.swift in Sources */,
 				C87A4FCD2F85EAAF00F12544 /* CMYKSlidersView.swift in Sources */,
 				C87A4FCE2F85EAAF00F12544 /* ColorState.swift in Sources */,
@@ -443,6 +450,7 @@
 				C87A4FD22F85EAAF00F12544 /* SymmetryGroup.swift in Sources */,
 				C87A4FD32F85EAAF00F12544 /* PDFExporter.swift in Sources */,
 				C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */,
+				C8C336D92F908A62001B002A /* PathRasterizer.swift in Sources */,
 				C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */,
 				C87A4FD42F85EAAF00F12544 /* TilingSettingsView.swift in Sources */,
 				C87A4FD52F85EAAF00F12544 /* GridCanvasView.swift in Sources */,

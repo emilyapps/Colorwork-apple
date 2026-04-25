@@ -9,6 +9,22 @@ struct ControlPanelView: View {
     var body: some View {
         @Bindable var doc = doc
         Form {
+            Section("Pattern Class") {
+                Picker("Class", selection: Binding(
+                    get: { doc.patternClass },
+                    set: { cls in
+                        doc.patternClass = cls
+                        if let cls { doc.symmetryGroup = cls.definition.symmetryGroup }
+                    }
+                )) {
+                    Text("None").tag(PatternClass?.none)
+                    ForEach(PatternClass.allCases, id: \.self) { cls in
+                        Text(cls.definition.displayName).tag(PatternClass?.some(cls))
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
             Section("Symmetry") {
                 HStack {
                     Text("Rotation")
@@ -66,6 +82,48 @@ struct ControlPanelView: View {
             Section {
                 Toggle("Highlight Domain", isOn: $doc.showDomain)
                     .onChange(of: doc.showDomain) { _, _ in doc.rebuildDescriptors() }
+            }
+
+            // MARK: - Debug: PathRasterizer tests
+            Section("Debug: Rasterizer") {
+                Button("Nordic Star") {
+                    doc.symmetryGroup = .d4
+                    doc.H = 18; doc.W = 18   // 13 matches reference pattern
+                    doc.generateFromLayers([
+                        RasterLayer(.nordicStar(armWidth: 0.308, size: 0.769))
+                    ])
+                }
+                Button("Nordic Star + Checker Center") {
+                    doc.symmetryGroup = .d4
+                    doc.H = 25; doc.W = 25
+                    doc.generateFromLayers([
+                        RasterLayer(.nordicStar(armWidth: 0.308, size: 0.769)),
+                        RasterLayer(.disk(centerX: 0.5, centerY: 0.5, radius: 0.35), fill: .checker)
+                    ])
+                }
+                Button("Heart") {
+                    doc.symmetryGroup = .d1
+                    doc.H = 16; doc.W = 16
+                    doc.generateFromLayers([
+                        RasterLayer(.heart(centerX: 0.5, centerY: 0.5, scale: 0.7))
+                    ])
+                }
+                Button("Heart + Dots") {
+                    doc.symmetryGroup = .d1
+                    doc.H = 20; doc.W = 20
+                    doc.generateFromLayers([
+                        RasterLayer(.heart(centerX: 0.5, centerY: 0.5, scale: 0.5)),
+                        RasterLayer(.dots(centerX: 0.5, centerY: 0.5,
+                                          count: 8, ringRadius: 0.75, dotRadius: 0.08))
+                    ])
+                }
+                Button("Pinwheel") {
+                    doc.symmetryGroup = .c4
+                    doc.H = 16; doc.W = 16
+                    doc.generateFromLayers([
+                        RasterLayer(.pinwheelArm(armWidth: 0.3, size: 0.9))
+                    ])
+                }
             }
         }
         .formStyle(.grouped)

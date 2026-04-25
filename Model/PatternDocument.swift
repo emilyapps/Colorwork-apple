@@ -66,6 +66,9 @@ final class PatternDocument {
         }
     }
 
+    // MARK: - Pattern class (drives bias strategy on generate)
+    var patternClass: PatternClass? = nil
+
     // MARK: - Persistence metadata
     var currentPatternName: String = "Untitled"
     var isDirty:            Bool   = false
@@ -126,11 +129,33 @@ final class PatternDocument {
             W = H
             isMutatingInternally = false
         }
-        let result = PatternEngine.generatePattern(H: H, W: W, group: symmetryGroup, density: density)
+        let bias = patternClass?.definition.biasStrategy ?? .uniform
+        let result = PatternEngine.generatePattern(H: H, W: W, group: symmetryGroup, density: density, bias: bias)
         grid             = result.grid
         domainCells      = result.domain
         domainSet        = Set(result.domain)
         cellToCanonical  = result.canonical
+        resetStrips()
+        rebuildTileDescriptors()
+        scheduleTilingRebuild()
+        fitCellSize()
+        isDirty = true
+    }
+
+    /// Generate a pattern deterministically from a list of raster layers.
+    /// Symmetry group and grid size are taken from the document's current settings.
+    func generateFromLayers(_ layers: [RasterLayer]) {
+        pushUndo("Generate")
+        if symmetryGroup.requiresSquare {
+            isMutatingInternally = true
+            W = H
+            isMutatingInternally = false
+        }
+        let result = PathRasterizer.rasterize(layers: layers, H: H, W: W, group: symmetryGroup)
+        grid            = result.grid
+        domainCells     = result.domain
+        domainSet       = Set(result.domain)
+        cellToCanonical = result.canonical
         resetStrips()
         rebuildTileDescriptors()
         scheduleTilingRebuild()
