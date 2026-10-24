@@ -37,14 +37,39 @@ enum RenderDescriptor {
         let width: CGFloat
     }
 
+    struct CircleInfo {
+        let cx, cy, r: CGFloat
+        let fill: String
+        let filled: Bool
+        let width: CGFloat      // stroke width when not filled
+    }
+
     case rect(RectInfo)
     case text(TextInfo)
     case line(LineInfo)
+    case circle(CircleInfo)
 }
 
 // MARK: - DescriptorBuilder
 
 enum DescriptorBuilder {
+
+    /// A Stitch's CYC symbol scaled into the cell at (x0, y0).
+    static func symbolDescriptors(_ stitch: Stitch, x0: CGFloat, y0: CGFloat,
+                                  cellSize cs: CGFloat, ink: String) -> [RenderDescriptor] {
+        let width = max(1, cs * 0.08)
+        return stitch.symbol.map { stroke in
+            switch stroke {
+            case .line(let a, let b):
+                return .line(.init(x1: x0 + a.x * cs, y1: y0 + a.y * cs,
+                                   x2: x0 + b.x * cs, y2: y0 + b.y * cs,
+                                   fill: ink, width: width))
+            case .circle(let c, let r, let filled):
+                return .circle(.init(cx: x0 + c.x * cs, cy: y0 + c.y * cs, r: r * cs,
+                                     fill: ink, filled: filled, width: width))
+            }
+        }
+    }
 
     // MARK: tile_canvas_size — port of pattern_core.py:tile_canvas_size
     static func tileCanvasSize(H: Int, W: Int, cellSize: CGFloat, hOn: Bool, vOn: Bool, stripWidth: Int) -> CGSize {
@@ -61,7 +86,8 @@ enum DescriptorBuilder {
         fillColor: String, bgColor: String,
         domainCells: Set<CellIndex>, showDomain: Bool,
         colStrip: [[Bool]], rowStrip: [[Bool]], corner: [[Bool]],
-        hOn: Bool, vOn: Bool, stripWidth: Int
+        hOn: Bool, vOn: Bool, stripWidth: Int,
+        stitches: [[Stitch]] = []
     ) -> [RenderDescriptor] {
         let cs = cellSize
         let sw = stripWidth
@@ -84,6 +110,10 @@ enum DescriptorBuilder {
                 out.append(.rect(.init(x: x0, y: y0, w: cs, h: cs,
                                        fill: fill, outline: ol, outlineWidth: ow,
                                        cell: cell, region: .tile)))
+                if r < stitches.count, c < stitches[r].count {
+                    out += symbolDescriptors(stitches[r][c], x0: x0, y0: y0, cellSize: cs,
+                                             ink: ColorMath.contrastInkHex(for: fill))
+                }
             }
         }
 

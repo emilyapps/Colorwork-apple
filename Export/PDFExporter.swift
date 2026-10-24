@@ -173,6 +173,18 @@ private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGCo
                 ctx.addLine(to: CGPoint(x: l.x2, y: l.y2))
                 ctx.strokePath()
             }
+        case .circle(let c):
+            if let color = cgColor(c.fill) {
+                let rect = CGRect(x: c.cx - c.r, y: c.cy - c.r, width: 2 * c.r, height: 2 * c.r)
+                if c.filled {
+                    ctx.setFillColor(color)
+                    ctx.fillEllipse(in: rect)
+                } else {
+                    ctx.setStrokeColor(color)
+                    ctx.setLineWidth(c.width)
+                    ctx.strokeEllipse(in: rect)
+                }
+            }
         }
     }
 }

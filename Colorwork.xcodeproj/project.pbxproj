@@ -38,6 +38,8 @@
 		C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */; };
 		C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */; };
 		C87A4FF02F86EAAF00F12544 /* ColorworkCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */; };
+		DEA7B5BFD03AAB38D4447A1C /* Stitch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A97FC57EC68B0581756C636 /* Stitch.swift */; };
+		EA9AC5956B9E0F1E599D0605 /* StitchToolPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D337A1F0291803BD7862BA0 /* StitchToolPicker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,6 +60,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		0D337A1F0291803BD7862BA0 /* StitchToolPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchToolPicker.swift; sourceTree = "<group>"; };
+		9A97FC57EC68B0581756C636 /* Stitch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stitch.swift; sourceTree = "<group>"; };
 		C82B598A2F8AA2EB003CDF73 /* ColorPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPreviewView.swift; sourceTree = "<group>"; };
 		C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureOverlayView.swift; sourceTree = "<group>"; };
 		C87A4F152F853B5100F12544 /* Colorwork.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Colorwork.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -181,6 +185,7 @@
 				C87A4FA12F85EAAF00F12544 /* PatternEngine.swift */,
 				C87A4FA22F85EAAF00F12544 /* RenderDescriptor.swift */,
 				C87A4FA32F85EAAF00F12544 /* SymmetryGroup.swift */,
+				9A97FC57EC68B0581756C636 /* Stitch.swift */,
 				C87A4FA42F85EAAF00F12544 /* TilingEngine.swift */,
 			);
 			path = Core;
@@ -243,6 +248,7 @@
 				C87A4FD82F85F69C00F12544 /* SidebarView.swift */,
 				C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */,
 				C87A4FB82F85EAAF00F12544 /* GridCanvasView.swift */,
+				0D337A1F0291803BD7862BA0 /* StitchToolPicker.swift */,
 				C87A4FB92F85EAAF00F12544 /* PatternEditorView.swift */,
 			);
 			path = Editor;
@@ -441,11 +447,13 @@
 				C87A4FD02F85EAAF00F12544 /* PatternEngine.swift in Sources */,
 				C87A4FD12F85EAAF00F12544 /* ColorMath.swift in Sources */,
 				C87A4FD22F85EAAF00F12544 /* SymmetryGroup.swift in Sources */,
+				DEA7B5BFD03AAB38D4447A1C /* Stitch.swift in Sources */,
 				C87A4FD32F85EAAF00F12544 /* PDFExporter.swift in Sources */,
 				C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */,
 				C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */,
 				C87A4FD42F85EAAF00F12544 /* TilingSettingsView.swift in Sources */,
 				C87A4FD52F85EAAF00F12544 /* GridCanvasView.swift in Sources */,
+				EA9AC5956B9E0F1E599D0605 /* StitchToolPicker.swift in Sources */,
 				C87A4FD62F85EAAF00F12544 /* PatternEditorView.swift in Sources */,
 				C87A4FD72F85EAAF00F12544 /* PatternDocument.swift in Sources */,
 				C87A4F932F85EA2100F12544 /* ContentView.swift in Sources */,

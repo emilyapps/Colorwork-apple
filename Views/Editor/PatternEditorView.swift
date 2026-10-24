@@ -33,9 +33,12 @@ struct PatternEditorView: View {
             // Main area: pattern canvas + tiling preview side by side
             HSplitView {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Pattern")
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding([.top, .leading], 8)
+                    HStack {
+                        Text("Pattern")
+                            .font(.system(size: 13, weight: .semibold))
+                        StitchToolPicker()
+                    }
+                    .padding([.top, .leading], 8)
                     GridCanvasView()
                 }
                 .frame(minWidth: 300, idealWidth: .infinity)
@@ -69,6 +72,10 @@ struct PatternEditorView: View {
                 .frame(maxHeight: .infinity)
 
             Divider()
+
+            StitchToolPicker()
+                .padding(.horizontal)
+                .padding(.top, 6)
 
             HStack {
                 Button("", systemImage: "wand.and.stars")                         { doc.generate() }

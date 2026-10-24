@@ -41,6 +41,12 @@ enum SVGExporter {
             case .line(let l):
                 lines.append("  <line x1=\"\(f(l.x1))\" y1=\"\(f(l.y1))\" x2=\"\(f(l.x2))\" y2=\"\(f(l.y2))\" stroke=\"\(l.fill)\" stroke-width=\"\(f(l.width))\"/>")
 
+            case .circle(let c):
+                let paint = c.filled
+                    ? "fill=\"\(c.fill)\" stroke=\"none\""
+                    : "fill=\"none\" stroke=\"\(c.fill)\" stroke-width=\"\(f(c.width))\""
+                lines.append("  <circle cx=\"\(f(c.cx))\" cy=\"\(f(c.cy))\" r=\"\(f(c.r))\" \(paint)/>")
+
             case .text(let t):
                 let escaped = t.text
                     .replacingOccurrences(of: "&", with: "&amp;")

@@ -11,7 +11,8 @@ import CoreGraphics
 final class PatternDocument {
 
     // MARK: - Grid state
-    var grid:   [[Bool]] = []
+    var grid:     [[Bool]]   = []
+    var stitches: [[Stitch]] = []   // parallel to grid; knit unless painted
     var H: Int = 8 {
         didSet {
             guard oldValue != H, !isMutatingInternally else { return }
@@ -30,6 +31,7 @@ final class PatternDocument {
     var symmetryGroup: SymmetryGroup = .d4 {
         didSet {
             pushUndo("Change Symmetry")
+            if !stitchToolsEnabled { paintTool = .color }
             if symmetryGroup.requiresSquare {
                 isMutatingInternally = true
                 W = H
@@ -40,6 +42,16 @@ final class PatternDocument {
     }
 
     fileprivate var isMutatingInternally = false
+
+    // MARK: - Paint tool
+    enum PaintTool: Equatable {
+        case color
+        case stitch(Stitch)
+    }
+    var paintTool: PaintTool = .color
+
+    /// Temporary guard until stitches follow symmetry (issue #3): stitches only under C1.
+    var stitchToolsEnabled: Bool { symmetryGroup == .c1 }
 
     private(set) var domainCells:    [CellIndex] = []
     private(set) var domainSet:      Set<CellIndex> = []
@@ -128,6 +140,7 @@ final class PatternDocument {
         }
         let result = PatternEngine.generatePattern(H: H, W: W, group: symmetryGroup, density: density)
         grid             = result.grid
+        resizeStitches()
         domainCells      = result.domain
         domainSet        = Set(result.domain)
         cellToCanonical  = result.canonical
@@ -141,6 +154,7 @@ final class PatternDocument {
     func clear() {
         pushUndo("Clear")
         grid = PatternEngine.clearGrid(H: H, W: W)
+        stitches = Stitch.allKnit(rows: H, cols: W)
         resetStrips()
         rebuildTileDescriptors()
         scheduleTilingRebuild()
@@ -171,6 +185,14 @@ final class PatternDocument {
         isDirty = true
     }
 
+    /// Paints a Stitch into a tile Cell without touching its color.
+    /// Border strips are color-only, so only the tile region takes stitches.
+    func paintStitch(_ stitch: Stitch, at cell: CellIndex) {
+        stitches[cell.row][cell.col] = stitch
+        rebuildTileDescriptors()
+        isDirty = true
+    }
+
     // Called when colors, cell size, domain highlight, or tiling settings change
     func rebuildDescriptors() {
         rebuildTileDescriptors()
@@ -197,10 +219,23 @@ final class PatternDocument {
             }
             resetStrips()
         }
+        resizeStitches()
         regenerateDomain()
         fitCellSize()
         rebuildDescriptors()
         isDirty = true
+    }
+
+    /// Keeps stitches where cells still exist; new cells are knit.
+    private func resizeStitches() {
+        let oldRows = stitches.count
+        let oldCols = stitches.first?.count ?? 0
+        guard oldRows != H || oldCols != W else { return }
+        stitches = (0 ..< H).map { r in
+            (0 ..< W).map { c in
+                r < oldRows && c < oldCols ? stitches[r][c] : .knit
+            }
+        }
     }
 
     private func resetStrips() {
@@ -222,7 +257,8 @@ final class PatternDocument {
             domainCells: domainSet, showDomain: showDomain,
             colStrip: colStrip, rowStrip: rowStrip, corner: corner,
             hOn: tiling.hRepeat, vOn: tiling.vRepeat,
-            stripWidth: tiling.stripWidth)
+            stripWidth: tiling.stripWidth,
+            stitches: stitches)
     }
 
     private var tilingTask: Task<Void, Never>?
@@ -293,6 +329,7 @@ struct PatternSnapshot: Codable {
     var H, W:           Int
     var symmetryGroup:  SymmetryGroup
     var grid:           [[Bool]]
+    var stitches:       [[Stitch]]?   // nil in snapshots saved before stitches existed
     var colStrip:       [[Bool]]
     var rowStrip:       [[Bool]]
     var corner:         [[Bool]]
@@ -308,6 +345,7 @@ struct PatternSnapshot: Codable {
         W             = doc.W
         symmetryGroup = doc.symmetryGroup
         grid          = doc.grid
+        stitches      = doc.stitches
         colStrip      = doc.colStrip
         rowStrip      = doc.rowStrip
         corner        = doc.corner
@@ -326,6 +364,7 @@ struct PatternSnapshot: Codable {
         doc.symmetryGroup = symmetryGroup
         doc.isMutatingInternally = false
         doc.grid          = grid
+        doc.stitches      = stitches ?? Stitch.allKnit(rows: H, cols: W)
         doc.tiling        = tiling    // must precede strips — didSet calls resetStrips() if stripWidth changed
         doc.colStrip      = colStrip
         doc.rowStrip      = rowStrip

@@ -86,6 +86,12 @@ struct GridCanvasView: View {
                 ctx.stroke(path,
                            with: .color(ColorMath.color(from: l.fill)),
                            lineWidth: l.width)
+            case .circle(let c):
+                let path = Path(ellipseIn: CGRect(x: c.cx - c.r, y: c.cy - c.r,
+                                                  width: 2 * c.r, height: 2 * c.r))
+                let color = ColorMath.color(from: c.fill)
+                if c.filled { ctx.fill(path, with: .color(color)) }
+                else        { ctx.stroke(path, with: .color(color), lineWidth: c.width) }
             }
         }
     }
@@ -105,7 +111,13 @@ struct GridCanvasView: View {
         let key = CellIndex(row: cell.row, col: cell.col)
         guard !dragVisited.contains(key) else { return }
         dragVisited.insert(key)
-        doc.toggleCell(cell, region: region)
+        switch doc.paintTool {
+        case .color:
+            doc.toggleCell(cell, region: region)
+        case .stitch(let stitch):
+            // Border strips are color-only
+            if region == .tile && doc.stitchToolsEnabled { doc.paintStitch(stitch, at: cell) }
+        }
     }
 
     private func endDrag() {

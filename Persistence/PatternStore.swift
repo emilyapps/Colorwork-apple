@@ -39,6 +39,7 @@ final class PatternStore {
             cornerData:    nil,
             tilingData:    nil)
         pattern.thumbnailData = thumb
+        pattern.stitchData    = try encoder.encode(doc.stitches)
         context.insert(pattern)
         try context.save()
     }
@@ -50,6 +51,8 @@ final class PatternStore {
         doc.W             = pattern.gridW
         doc.symmetryGroup = SymmetryGroup(rawValue: pattern.symmetryGroup) ?? .d4
         doc.grid          = grid
+        doc.stitches      = pattern.stitchData.flatMap { try? decoder.decode([[Stitch]].self, from: $0) }
+            ?? Stitch.allKnit(rows: pattern.gridH, cols: pattern.gridW)
         doc.density       = pattern.fillDensity
         doc.fillColor.setHex(pattern.fillColor)
         doc.bgColor.setHex(pattern.bgColor)
