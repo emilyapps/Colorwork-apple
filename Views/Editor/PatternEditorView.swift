@@ -63,15 +63,14 @@ struct PatternEditorView: View {
 
     #if os(iOS)
     private var iphoneLayout: some View {
-        ZStack {
+        VStack(spacing: 0) {
             GridCanvasView()
                 .ignoresSafeArea(edges: .horizontal)
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("", systemImage: "square.and.arrow.up") { export() }
-            }
-            ToolbarItemGroup(placement: .bottomBar) {
+                .frame(maxHeight: .infinity)
+
+            Divider()
+
+            HStack {
                 Button("", systemImage: "wand.and.stars")                         { doc.generate() }
                 Spacer()
                 Button("", systemImage: "trash")                                  { doc.clear() }
@@ -86,6 +85,13 @@ struct PatternEditorView: View {
                 Spacer()
                 Button("", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
                     .disabled(!doc.canUndo)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("", systemImage: "square.and.arrow.up") { export() }
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {
