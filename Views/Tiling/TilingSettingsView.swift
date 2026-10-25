@@ -13,12 +13,12 @@ struct TilingSettingsView: View {
             Section("Repeat") {
                 Toggle("Horizontal", isOn: $doc.tiling.hRepeat)
                 if doc.tiling.hRepeat {
-                    repeatTypeRow(label: "Side by side", binding: $doc.tiling.horizontalRepeatType,
+                    repeatTypeRow(label: "Horizontal repeat type", binding: $doc.tiling.horizontalRepeatType,
                                   allowed: doc.allowedRepeatTypes(horizontal: true))
                 }
                 Toggle("Vertical", isOn: $doc.tiling.vRepeat)
                 if doc.tiling.vRepeat {
-                    repeatTypeRow(label: "Stacked", binding: $doc.tiling.verticalRepeatType,
+                    repeatTypeRow(label: "Vertical repeat type", binding: $doc.tiling.verticalRepeatType,
                                   allowed: doc.allowedRepeatTypes(horizontal: false))
                 }
                 if !doc.limitingStitches.isEmpty {
@@ -52,7 +52,7 @@ struct TilingSettingsView: View {
                 switch type {
                 case .translation: Text("Translate").tag(type)
                 case .reflection:  Text("Reflect").tag(type)
-                case .rotation:    Text("Half-turn").tag(type)
+                case .rotation:    Text("180°").tag(type)
                 }
             }
         }
