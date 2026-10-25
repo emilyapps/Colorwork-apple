@@ -57,7 +57,7 @@ enum DescriptorBuilder {
     /// A Stitch's CYC symbol scaled into the cell at (x0, y0).
     static func symbolDescriptors(_ stitch: Stitch, x0: CGFloat, y0: CGFloat,
                                   cellSize cs: CGFloat, ink: String) -> [RenderDescriptor] {
-        let width = max(1, cs * 0.08)
+        let width = max(1, cs * 0.05)
         return stitch.symbol.map { stroke in
             switch stroke {
             case .line(let a, let b):

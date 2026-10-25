@@ -53,28 +53,32 @@ enum Stitch: String, CaseIterable, Codable {
         }
     }
 
-    /// CYC chart symbol, in unit-cell coordinates (0…1, y down).
+    /// CYC chart symbol, in unit-cell coordinates (0…1, y down), traced from
+    /// craftyarncouncil.com/standards/knit-chart-symbols. Decreases use CYC's second
+    /// version; make 1 uses the first (the second is the text "MR"/"ML").
+    /// Centered double decrease is CYC's S2KP2.
     /// Left-leaning symbols are drawn as mirror images of their right-leaning partners.
     var symbol: [SymbolStroke] {
         switch self {
         case .knit:
             return []
         case .purl:
-            return [.circle(center: CGPoint(x: 0.5, y: 0.5), radius: 0.12, filled: true)]
+            return [.circle(center: CGPoint(x: 0.5, y: 0.5), radius: 0.06, filled: true)]
         case .k2tog:
-            return [.line(CGPoint(x: 0.2, y: 0.8), CGPoint(x: 0.8, y: 0.2))]
+            return [.line(CGPoint(x: 0.33, y: 0.67), CGPoint(x: 0.67, y: 0.33))]
         case .centeredDoubleDecrease:
-            return [.line(CGPoint(x: 0.2, y: 0.8), CGPoint(x: 0.5, y: 0.2)),
-                    .line(CGPoint(x: 0.5, y: 0.2), CGPoint(x: 0.8, y: 0.8)),
-                    .line(CGPoint(x: 0.5, y: 0.2), CGPoint(x: 0.5, y: 0.8))]
+            return [.line(CGPoint(x: 0.33, y: 0.67), CGPoint(x: 0.5, y: 0.3)),
+                    .line(CGPoint(x: 0.5, y: 0.3), CGPoint(x: 0.67, y: 0.67)),
+                    .line(CGPoint(x: 0.5, y: 0.3), CGPoint(x: 0.5, y: 0.67))]
         case .k3tog:
-            return [.line(CGPoint(x: 0.2, y: 0.8), CGPoint(x: 0.8, y: 0.2)),
-                    .line(CGPoint(x: 0.5, y: 0.5), CGPoint(x: 0.8, y: 0.8))]
+            return [.line(CGPoint(x: 0.33, y: 0.67), CGPoint(x: 0.67, y: 0.33)),
+                    .line(CGPoint(x: 0.5, y: 0.5), CGPoint(x: 0.67, y: 0.67)),
+                    .line(CGPoint(x: 0.5, y: 0.5), CGPoint(x: 0.5, y: 0.67))]
         case .yarnOver:
-            return [.circle(center: CGPoint(x: 0.5, y: 0.5), radius: 0.25, filled: false)]
+            return [.circle(center: CGPoint(x: 0.5, y: 0.5), radius: 0.17, filled: false)]
         case .m1r:
-            return [.line(CGPoint(x: 0.5, y: 0.8), CGPoint(x: 0.5, y: 0.2)),
-                    .line(CGPoint(x: 0.5, y: 0.5), CGPoint(x: 0.8, y: 0.25))]
+            return [.line(CGPoint(x: 0.29, y: 0.85), CGPoint(x: 0.78, y: 0.17)),
+                    .line(CGPoint(x: 0.18, y: 0.22), CGPoint(x: 0.55, y: 0.49))]
         case .ssk:  return Stitch.k2tog.symbol.map { $0.mirroredLeftRight }
         case .sssk: return Stitch.k3tog.symbol.map { $0.mirroredLeftRight }
         case .m1l:  return Stitch.m1r.symbol.map { $0.mirroredLeftRight }
