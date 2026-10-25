@@ -16,7 +16,7 @@ struct TilingSettingsView: View {
         @Bindable var doc = doc
         return Form {
             Section("Radial Repeat") {
-                Stepper("Repeats: \(doc.radialRepeat)", value: $doc.radialRepeat, in: 1...60)
+                IntSliderView(label: "N", range: 1...60, value: $doc.radialRepeat)
             }
         }
         .formStyle(.grouped)
