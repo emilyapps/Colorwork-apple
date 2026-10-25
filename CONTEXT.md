@@ -118,6 +118,8 @@ _Avoid_: Flipped stitch, rotated stitch
 - In the **Circular View**, row 1 is at the center if stitch counts mostly grow, and on the outside if they mostly shrink; a flip control overrides this (this view setting is not a construction direction)
 - **Reflection across a vertical axis** swaps **Lean** left ↔ right; what other Transformations do to a Stitch is left to its **Visual Equivalents**
 - A decrease leans away from its **Ended Column(s)**: k2tog ends the column to its left, ssk the column to its right, a centered double decrease one on each side
+- A decrease ends the *nearest live* column on its side, skipping columns already ended and cells holding another increase or decrease; rows are resolved from row 1 upward, so stacked decreases (a crown's decrease line) end successive columns
+- Columns wrap around at the chart's edges, because a chart is one repeat and its edge columns meet the next copy
 - An increase's **Started Column** is its own column; **Lean** affects only its symbol
 - A Cell's color and **Stitch** are painted independently: painting a Stitch never changes the color, painting a color never changes the Stitch
 - Stitches are drawn with Craft Yarn Council (CYC) standard symbols, in black or white, whichever contrasts with the Cell's color; every chart shows a legend of the Stitches it uses

@@ -46,6 +46,16 @@ struct StitchExportTests {
         #expect(!svg.contains(">ssk</text>"))
     }
 
+    @Test func legendListsNoStitchOnlyWhenTheChartHasIt() throws {
+        let svg = String(decoding: try SVGExporter.export(doc: laceDoc()), as: UTF8.self)
+        #expect(svg.contains(">No stitch</text>"))                 // k2tog ends a column
+
+        let doc = PatternDocument()
+        doc.paintStitch(.purl, at: CellIndex(row: 0, col: 0))
+        let purlOnly = String(decoding: try SVGExporter.export(doc: doc), as: UTF8.self)
+        #expect(!purlOnly.contains(">No stitch</text>"))
+    }
+
     @Test func exportsUseTheCanvasDescriptors() {
         let doc = laceDoc()
         doc.showDomain = false

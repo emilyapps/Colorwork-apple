@@ -126,6 +126,9 @@ final class PatternDocument {
 
     // MARK: - Cached descriptors (invalidated when state changes)
     private(set) var tileDescriptors:   [RenderDescriptor] = []
+    /// Derived from stitches by the Shaping Resolver (ADR 0002); never painted or saved.
+    private(set) var noStitch:           [[Bool]] = []
+    private(set) var liveStitchesPerRow: [Int] = []
     private(set) var tileCanvasSize:    CGSize = .zero
 
     // Runtime only — set by GridCanvasView, not persisted
@@ -135,7 +138,8 @@ final class PatternDocument {
         guard canvasAvailableSize.width > 0, canvasAvailableSize.height > 0 else { return }
         let fitW = (canvasAvailableSize.width  - 2 * Layout.padding - Layout.numW) / CGFloat(W)
         let legend = DescriptorBuilder.legendHeight(DescriptorBuilder.legendStitches(stitches),
-                                                    width: canvasAvailableSize.width)
+                                                    width: canvasAvailableSize.width,
+                                                    noStitch: noStitch.joined().contains(true))
         let fitH = (canvasAvailableSize.height - 2 * Layout.padding - Layout.numH - legend) / CGFloat(H)
         let newSize = max(8, min(60, floor(min(fitW, fitH))))
         cellSize = Double(newSize)
@@ -145,6 +149,7 @@ final class PatternDocument {
     // Tiling grid is computed on a background task
     private(set) var tilingGrid:        [[Bool]] = []
     private(set) var tilingStitchGrid: [[Stitch]] = []
+    private(set) var tilingNoStitchGrid: [[Bool]] = []
     private(set) var tilingDescriptors: [RenderDescriptor] = []
     private(set) var tilingRows:        Int = 0
     private(set) var tilingCols:        Int = 0
@@ -305,6 +310,9 @@ final class PatternDocument {
     }
 
     private func rebuildTileDescriptors() {
+        let shaping = ShapingResolver.resolve(stitches)
+        noStitch = shaping.noStitch
+        liveStitchesPerRow = shaping.liveStitchesPerRow
         let cs = CGFloat(cellSize)
         tileCanvasSize = DescriptorBuilder.tileCanvasSize(
             H: H, W: W, cellSize: cs,
@@ -317,7 +325,7 @@ final class PatternDocument {
             colStrip: colStrip, rowStrip: rowStrip, corner: corner,
             hOn: tiling.hRepeat, vOn: tiling.vRepeat,
             stripWidth: tiling.stripWidth,
-            stitches: stitches)
+            stitches: stitches, noStitch: noStitch)
     }
 
     private var tilingTask: Task<Void, Never>?
@@ -346,6 +354,14 @@ final class PatternDocument {
                 nH: snap.tiling.nCopies, nV: snap.tiling.nCopies,
                 rowOffset: snap.tiling.rowOffset, colOffset: snap.tiling.colOffset,
                 copy: { s, t in s.visualEquivalent(under: t) ?? s })
+            let noStitchGrid = TilingEngine.buildTilingGrid(
+                tile: snap.noStitch, H: snap.H, W: snap.W,
+                colStrip: [], rowStrip: [], corner: [], empty: false,
+                hRepeat: snap.tiling.hRepeat, vRepeat: snap.tiling.vRepeat,
+                stripWidth: snap.tiling.stripWidth,
+                horizontal: snap.tiling.horizontalRepeatType, vertical: snap.tiling.verticalRepeatType,
+                nH: snap.tiling.nCopies, nV: snap.tiling.nCopies,
+                rowOffset: snap.tiling.rowOffset, colOffset: snap.tiling.colOffset)
             guard !Task.isCancelled else { return }
             let cs = CGFloat(snap.tiling.previewCellSize)
             let (descs, rows, cols) = DescriptorBuilder.tilingDescriptors(
@@ -357,11 +373,12 @@ final class PatternDocument {
                 nCopies: snap.tiling.nCopies,
                 W: snap.W, H: snap.H,
                 rowOffset: snap.tiling.rowOffset, colOffset: snap.tiling.colOffset,
-                cellSize: cs, stitchGrid: stitchGrid)
+                cellSize: cs, stitchGrid: stitchGrid, noStitchGrid: noStitchGrid)
             guard !Task.isCancelled else { return }
             await MainActor.run { [weak self] in
                 self?.tilingGrid        = tg
                 self?.tilingStitchGrid  = stitchGrid
+                self?.tilingNoStitchGrid = noStitchGrid
                 self?.tilingDescriptors = descs
                 self?.tilingRows        = rows
                 self?.tilingCols        = cols
@@ -376,6 +393,7 @@ final class PatternDocument {
 private struct TilingSnapshot {
     let grid: [[Bool]]
     let stitches: [[Stitch]]
+    let noStitch: [[Bool]]
     let H, W: Int
     let colStrip, rowStrip, corner: [[Bool]]
     let tiling: TilingSettings
@@ -384,6 +402,7 @@ private struct TilingSnapshot {
     init(from doc: PatternDocument) {
         grid     = doc.grid
         stitches = doc.stitches
+        noStitch = ShapingResolver.resolve(doc.stitches).noStitch
         H        = min(doc.H, doc.grid.count)
         W        = min(doc.W, doc.grid.first?.count ?? 0)
         colStrip = doc.colStrip

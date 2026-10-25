@@ -73,7 +73,8 @@ enum PDFExporter {
                 horizontal: doc.tiling.horizontalRepeatType, vertical: doc.tiling.verticalRepeatType,
                 nCopies: doc.tiling.nCopies, W: doc.W, H: doc.H,
                 rowOffset: doc.tiling.rowOffset, colOffset: doc.tiling.colOffset,
-                cellSize: cs, padding: pad, stitchGrid: doc.tilingStitchGrid)
+                cellSize: cs, padding: pad, stitchGrid: doc.tilingStitchGrid,
+                noStitchGrid: doc.tilingNoStitchGrid)
             let size = CGSize(width: CGFloat(tiling.cols) * cs + 2 * pad,
                               height: CGFloat(tiling.rows) * cs + 2 * pad)
             drawPage(tiling.descriptors, size: size, scale: fitScale(size, maxScale: tileScale), into: ctx)
@@ -160,7 +161,8 @@ enum ExportTile {
             domainCells: doc.domainSet, showDomain: false,
             colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
             hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches)
+            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches,
+            noStitch: ShapingResolver.resolve(doc.stitches).noStitch)
         return (size, descriptors)
     }
 }

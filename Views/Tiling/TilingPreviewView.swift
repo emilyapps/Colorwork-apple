@@ -56,17 +56,20 @@ struct TilingPreviewView: View {
         let bgColor   = ColorMath.color(from: doc.bgColor.hex)
         let grid      = doc.tilingGrid
         let stitches  = doc.tilingStitchGrid
+        let gaps      = doc.tilingNoStitchGrid
+        let gapColor  = ColorMath.color(from: Layout.noStitchFill)
         let inkOnFill = ColorMath.color(from: ColorMath.contrastInkHex(for: doc.fillColor.hex))
         let inkOnBg   = ColorMath.color(from: ColorMath.contrastInkHex(for: doc.bgColor.hex))
 
         for r in 0 ..< doc.tilingRows {
             for c in 0 ..< doc.tilingCols {
                 let rect = CGRect(x: CGFloat(c) * cs, y: CGFloat(r) * cs, width: cs, height: cs)
-                ctx.fill(Path(rect), with: .color(grid[r][c] ? fillColor : bgColor))
+                let gap = r < gaps.count && c < gaps[r].count && gaps[r][c]
+                ctx.fill(Path(rect), with: .color(gap ? gapColor : grid[r][c] ? fillColor : bgColor))
                 if cs >= 4 {
                     ctx.stroke(Path(rect), with: .color(.gray.opacity(0.25)), lineWidth: 0.5)
                 }
-                if cs >= 6, r < stitches.count, c < stitches[r].count {
+                if !gap, cs >= 6, r < stitches.count, c < stitches[r].count {
                     drawSymbol(stitches[r][c], in: ctx, at: rect.origin, cellSize: cs,
                                ink: grid[r][c] ? inkOnFill : inkOnBg)
                 }

@@ -38,6 +38,7 @@
 		C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */; };
 		C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */; };
 		C87A4FF02F86EAAF00F12544 /* ColorworkCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */; };
+		D71C8C8D54E58BCB3AF374AF /* ShapingResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAA4FE327A748DBFE2A91E09 /* ShapingResolver.swift */; };
 		DEA7B5BFD03AAB38D4447A1C /* Stitch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A97FC57EC68B0581756C636 /* Stitch.swift */; };
 		EA9AC5956B9E0F1E599D0605 /* StitchToolPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0D337A1F0291803BD7862BA0 /* StitchToolPicker.swift */; };
 /* End PBXBuildFile section */
@@ -96,6 +97,7 @@
 		C87A4FEB2F86EAAF00F12544 /* SVGExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SVGExporter.swift; sourceTree = "<group>"; };
 		C87A4FED2F86EAAF00F12544 /* ExportPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPanel.swift; sourceTree = "<group>"; };
 		C87A4FEF2F86EAAF00F12544 /* ColorworkCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorworkCommands.swift; sourceTree = "<group>"; };
+		CAA4FE327A748DBFE2A91E09 /* ShapingResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapingResolver.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -186,6 +188,7 @@
 				C87A4FA22F85EAAF00F12544 /* RenderDescriptor.swift */,
 				C87A4FA32F85EAAF00F12544 /* SymmetryGroup.swift */,
 				9A97FC57EC68B0581756C636 /* Stitch.swift */,
+				CAA4FE327A748DBFE2A91E09 /* ShapingResolver.swift */,
 				C87A4FA42F85EAAF00F12544 /* TilingEngine.swift */,
 			);
 			path = Core;
@@ -448,6 +451,7 @@
 				C87A4FD12F85EAAF00F12544 /* ColorMath.swift in Sources */,
 				C87A4FD22F85EAAF00F12544 /* SymmetryGroup.swift in Sources */,
 				DEA7B5BFD03AAB38D4447A1C /* Stitch.swift in Sources */,
+				D71C8C8D54E58BCB3AF374AF /* ShapingResolver.swift in Sources */,
 				C87A4FD32F85EAAF00F12544 /* PDFExporter.swift in Sources */,
 				C87A4FEA2F86EAAF00F12544 /* SVGExporter.swift in Sources */,
 				C87A4FEC2F86EAAF00F12544 /* ExportPanel.swift in Sources */,

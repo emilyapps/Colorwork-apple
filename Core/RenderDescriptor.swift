@@ -12,6 +12,7 @@ enum Layout {
     static let numH:    CGFloat = 16   // extra bottom margin for col numbers
     static let stripBG   = "#e8e8e8"
     static let stripLine = "#aaaaaa"
+    static let noStitchFill = "#bdbdbd"     // CYC: gray squares where stitches don't exist
 
     // Legend below the column numbers (fixed size, independent of cell size)
     static let legendGap:    CGFloat = 10
@@ -85,8 +86,9 @@ enum DescriptorBuilder {
         let exR = vOn ? CGFloat(stripWidth) : 0
         let width  = (CGFloat(W) + exC) * cellSize + 2 * Layout.padding + Layout.numW
         let height = (CGFloat(H) + exR) * cellSize + 2 * Layout.padding + Layout.numH
+        let gaps = ShapingResolver.resolve(stitches).noStitch.joined().contains(true)
         return CGSize(width: width,
-                      height: height + legendHeight(legendStitches(stitches), width: width))
+                      height: height + legendHeight(legendStitches(stitches), width: width, noStitch: gaps))
     }
 
     // MARK: Legend
@@ -103,24 +105,31 @@ enum DescriptorBuilder {
         max(1, Int((width - 2 * Layout.padding) / Layout.legendColumn))
     }
 
-    static func legendHeight(_ legend: [Stitch], width: CGFloat) -> CGFloat {
+    /// A No Stitch entry follows the stitches whenever the chart has No Stitch cells,
+    /// which needs a decrease, so it never appears without stitches.
+    static func legendHeight(_ legend: [Stitch], width: CGFloat, noStitch: Bool = false) -> CGFloat {
         guard !legend.isEmpty else { return 0 }
-        let rows = (legend.count + legendColumns(width: width) - 1) / legendColumns(width: width)
+        let entries = legend.count + (noStitch ? 1 : 0)
+        let rows = (entries + legendColumns(width: width) - 1) / legendColumns(width: width)
         return Layout.legendGap + CGFloat(rows) * Layout.legendRow
     }
 
     /// One symbol box and name per stitch, in columns, starting at y0.
-    static func legendDescriptors(_ legend: [Stitch], y0: CGFloat, width: CGFloat) -> [RenderDescriptor] {
+    static func legendDescriptors(_ legend: [Stitch], y0: CGFloat, width: CGFloat,
+                                  noStitch: Bool = false) -> [RenderDescriptor] {
+        guard !legend.isEmpty else { return [] }
         let columns = legendColumns(width: width)
         let box = Layout.legendBox
+        let entries: [Stitch?] = legend + (noStitch ? [nil] : [])
         var out = [RenderDescriptor]()
-        for (i, stitch) in legend.enumerated() {
+        for (i, stitch) in entries.enumerated() {
             let x = Layout.padding + CGFloat(i % columns) * Layout.legendColumn
             let y = y0 + Layout.legendGap + CGFloat(i / columns) * Layout.legendRow
-            out.append(.rect(.init(x: x, y: y, w: box, h: box, fill: "#ffffff",
+            out.append(.rect(.init(x: x, y: y, w: box, h: box,
+                                   fill: stitch == nil ? Layout.noStitchFill : "#ffffff",
                                    outline: "#999999", outlineWidth: 1, cell: nil, region: nil)))
-            out += symbolDescriptors(stitch, x0: x, y0: y, cellSize: box, ink: "#000000")
-            out.append(.text(.init(x: x + box + 6, y: y + box / 2, text: stitch.displayName,
+            if let stitch { out += symbolDescriptors(stitch, x0: x, y0: y, cellSize: box, ink: "#000000") }
+            out.append(.text(.init(x: x + box + 6, y: y + box / 2, text: stitch?.displayName ?? "No stitch",
                                    fontSize: 11, fill: "#333333", leading: true)))
         }
         return out
@@ -133,7 +142,7 @@ enum DescriptorBuilder {
         domainCells: Set<CellIndex>, showDomain: Bool,
         colStrip: [[Bool]], rowStrip: [[Bool]], corner: [[Bool]],
         hOn: Bool, vOn: Bool, stripWidth: Int,
-        stitches: [[Stitch]] = []
+        stitches: [[Stitch]] = [], noStitch: [[Bool]] = []
     ) -> [RenderDescriptor] {
         let cs = cellSize
         let sw = stripWidth
@@ -149,14 +158,15 @@ enum DescriptorBuilder {
             for c in 0 ..< W {
                 let x0 = Layout.padding + CGFloat(c) * cs
                 let y0 = Layout.padding + CGFloat(r) * cs
-                let fill = safeGet(grid, r, c) ? fillColor : bgColor
+                let gap = safeGet(noStitch, r, c)
+                let fill = gap ? Layout.noStitchFill : safeGet(grid, r, c) ? fillColor : bgColor
                 let cell = CellIndex(row: r, col: c)
                 let (ol, ow): (String, CGFloat) = showDomain && domainCells.contains(cell)
                     ? ("#e63946", 2) : ("#cccccc", 1)
                 out.append(.rect(.init(x: x0, y: y0, w: cs, h: cs,
                                        fill: fill, outline: ol, outlineWidth: ow,
                                        cell: cell, region: .tile)))
-                if r < stitches.count, c < stitches[r].count {
+                if !gap, r < stitches.count, c < stitches[r].count {
                     out += symbolDescriptors(stitches[r][c], x0: x0, y0: y0, cellSize: cs,
                                              ink: ColorMath.contrastInkHex(for: fill))
                 }
@@ -247,7 +257,7 @@ enum DescriptorBuilder {
         let width = CGFloat(totalCols) * cs + 2 * Layout.padding + Layout.numW
         out += legendDescriptors(legendStitches(stitches),
                                  y0: Layout.padding + CGFloat(totalRows) * cs + Layout.numH,
-                                 width: width)
+                                 width: width, noStitch: noStitch.joined().contains(true))
 
         return out
     }
@@ -261,7 +271,7 @@ enum DescriptorBuilder {
         nCopies: Int, W: Int, H: Int,
         rowOffset: Int, colOffset: Int,
         cellSize: CGFloat, padding: CGFloat = 1,
-        stitchGrid: [[Stitch]] = []
+        stitchGrid: [[Stitch]] = [], noStitchGrid: [[Bool]] = []
     ) -> (descriptors: [RenderDescriptor], rows: Int, cols: Int) {
         let cs = cellSize
         let rows = tilingGrid.count
@@ -272,11 +282,12 @@ enum DescriptorBuilder {
             for c in 0 ..< cols {
                 let x0 = padding + CGFloat(c) * cs
                 let y0 = padding + CGFloat(r) * cs
-                let fill = tilingGrid[r][c] ? fillColor : bgColor
+                let gap = r < noStitchGrid.count && c < noStitchGrid[r].count && noStitchGrid[r][c]
+                let fill = gap ? Layout.noStitchFill : tilingGrid[r][c] ? fillColor : bgColor
                 out.append(.rect(.init(x: x0, y: y0, w: cs, h: cs,
                                        fill: fill, outline: "#cccccc", outlineWidth: 1,
                                        cell: nil, region: nil)))
-                if r < stitchGrid.count, c < stitchGrid[r].count {
+                if !gap, r < stitchGrid.count, c < stitchGrid[r].count {
                     out += symbolDescriptors(stitchGrid[r][c], x0: x0, y0: y0, cellSize: cs,
                                              ink: ColorMath.contrastInkHex(for: fill))
                 }
