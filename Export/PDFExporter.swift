@@ -45,8 +45,9 @@ enum PDFExporter {
         return min(maxScale, box.width / size.width, box.height / size.height)
     }
 
-    /// Page 1 is the chart with its legend; page 2 is the tiled pattern drawn with the same
-    /// cell size as page 1 when it fits, smaller when it doesn't. Both are Letter pages.
+    /// Page 1 is the chart with its legend (and, for a Wedge, its stitch totals). Page 2 is a
+    /// Tile's tiled pattern, drawn with page 1's cell size when it fits and smaller when it
+    /// doesn't, or a Wedge's Circular View. Both are Letter pages.
     static func export(doc: PatternDocument, includeTiling: Bool = true) throws -> Data {
         let (tileSize, tileDescs) = ExportTile.make(doc)
 
@@ -62,8 +63,15 @@ enum PDFExporter {
         drawPage(tileDescs, size: tileSize, scale: tileScale, into: ctx)
 
         // ---- Page 2: Tiled pattern (optional) ----
-        // A Wedge's page 2 will be its Circular View (#10); until then it has no page 2.
-        if includeTiling && doc.kind == .tile && doc.tilingRows > 0 && doc.tilingCols > 0 {
+        if includeTiling && doc.kind == .wedge {
+            let side = min(pageSize.width, pageSize.height) - 2 * margin
+            let size = CGSize(width: side, height: side)
+            let rings = RadialLayout.descriptors(
+                grid: doc.grid, shaping: ShapingResolver.resolve(doc.stitches),
+                repeats: doc.radialRepeat, flipped: doc.circularFlipped, size: size,
+                fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex)
+            drawPage(rings, size: size, scale: 1, into: ctx)
+        } else if includeTiling && doc.tilingRows > 0 && doc.tilingCols > 0 {
             let cs = CGFloat(doc.cellSize)
             let pad: CGFloat = 1
             let tiling = DescriptorBuilder.tilingDescriptors(
@@ -155,7 +163,7 @@ enum ExportTile {
         let size = DescriptorBuilder.tileCanvasSize(
             H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
             hOn: doc.showsColStrip, vOn: doc.showsRowStrip,
-            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches)
+            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches, showsTotals: doc.kind == .wedge)
         let descriptors = DescriptorBuilder.tileDescriptors(
             grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
             fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
@@ -163,7 +171,7 @@ enum ExportTile {
             colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
             hOn: doc.showsColStrip, vOn: doc.showsRowStrip,
             stripWidth: doc.tiling.stripWidth, stitches: doc.stitches,
-            noStitch: ShapingResolver.resolve(doc.stitches).noStitch)
+            noStitch: ShapingResolver.resolve(doc.stitches).noStitch, totals: doc.wedgeTotals)
         return (size, descriptors)
     }
 }
@@ -209,15 +217,19 @@ private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGCo
             }
         case .polygon(let p):
             guard let fill = cgColor(p.fill) else { break }
+            // Stroking in the fill color seals hairline seams between neighbouring polygons.
             ctx.addLines(between: p.points)
             ctx.closePath()
             ctx.setFillColor(fill)
+            ctx.setStrokeColor(fill)
+            ctx.setLineWidth(0.4)
+            ctx.drawPath(using: .fillStroke)
             if let outline = p.outline.flatMap(cgColor) {
+                ctx.addLines(between: p.points)
+                ctx.closePath()
                 ctx.setStrokeColor(outline)
                 ctx.setLineWidth(p.outlineWidth)
-                ctx.drawPath(using: .fillStroke)
-            } else {
-                ctx.fillPath()
+                ctx.strokePath()
             }
         }
     }

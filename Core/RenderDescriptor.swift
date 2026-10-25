@@ -10,6 +10,7 @@ enum Layout {
     static let padding: CGFloat = 20   // margin around tile on all sides
     static let numW:    CGFloat = 26   // extra right margin for row numbers
     static let numH:    CGFloat = 16   // extra bottom margin for col numbers
+    static let totalsW: CGFloat = 84   // extra right margin for a Wedge's stitch totals
     static let stripBG   = "#e8e8e8"
     static let stripLine = "#aaaaaa"
     static let noStitchFill = "#bdbdbd"     // CYC: gray squares where stitches don't exist
@@ -89,10 +90,11 @@ enum DescriptorBuilder {
 
     // MARK: tile_canvas_size — port of pattern_core.py:tile_canvas_size
     static func tileCanvasSize(H: Int, W: Int, cellSize: CGFloat, hOn: Bool, vOn: Bool, stripWidth: Int,
-                               stitches: [[Stitch]] = []) -> CGSize {
+                               stitches: [[Stitch]] = [], showsTotals: Bool = false) -> CGSize {
         let exC = hOn ? CGFloat(stripWidth) : 0
         let exR = vOn ? CGFloat(stripWidth) : 0
         let width  = (CGFloat(W) + exC) * cellSize + 2 * Layout.padding + Layout.numW
+            + (showsTotals ? Layout.totalsW : 0)
         let height = (CGFloat(H) + exR) * cellSize + 2 * Layout.padding + Layout.numH
         let gaps = ShapingResolver.resolve(stitches).noStitch.joined().contains(true)
         return CGSize(width: width,
@@ -150,7 +152,8 @@ enum DescriptorBuilder {
         domainCells: Set<CellIndex>, showDomain: Bool,
         colStrip: [[Bool]], rowStrip: [[Bool]], corner: [[Bool]],
         hOn: Bool, vOn: Bool, stripWidth: Int,
-        stitches: [[Stitch]] = [], noStitch: [[Bool]] = []
+        stitches: [[Stitch]] = [], noStitch: [[Bool]] = [],
+        totals: [(row: Int, stitches: Int)] = []
     ) -> [RenderDescriptor] {
         let cs = cellSize
         let sw = stripWidth
@@ -259,6 +262,18 @@ enum DescriptorBuilder {
                     x: numX, y: Layout.padding + CGFloat(H + sr) * cs + cs / 2,
                     text: "\(exR - sr)", fontSize: numFS, fill: "#777777")))
             }
+        }
+
+        // Stitch totals (Wedges), right of the row numbers, bottom to top; a label that would
+        // overlap the one below it moves up just enough.
+        let totalsFS = max(8, min(11, cs))
+        var lowestFreeY = CGFloat.greatestFiniteMagnitude
+        for total in totals {
+            let y = min(Layout.padding + CGFloat(totalRows - total.row) * cs + cs / 2, lowestFreeY)
+            lowestFreeY = y - totalsFS - 1
+            out.append(.text(.init(x: numX + Layout.numW / 2 + 4, y: y,
+                                   text: "Row \(total.row): \(total.stitches)",
+                                   fontSize: totalsFS, fill: "#555555", leading: true)))
         }
 
         // Legend

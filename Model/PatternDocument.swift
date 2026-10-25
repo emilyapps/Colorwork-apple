@@ -59,7 +59,15 @@ final class PatternDocument {
     var kind: PatternKind = .tile
 
     /// Radial Repeat count N for a Wedge; stored in Projects, not Patterns.
-    var radialRepeat: Int = 8
+    var radialRepeat: Int = 8 {
+        didSet { if kind == .wedge && oldValue != radialRepeat { rebuildDescriptors() } }
+    }
+
+    /// Stitches around on row 1 and wherever the count changes, for a Wedge's chart.
+    var wedgeTotals: [(row: Int, stitches: Int)] {
+        guard kind == .wedge else { return [] }
+        return ShapingResolver.resolve(stitches).totals(repeats: radialRepeat)
+    }
 
     /// Wedge preview settings; view settings, so stored in Projects and untouched by undo.
     var wedgeView: WedgeView = .chart
@@ -186,7 +194,8 @@ final class PatternDocument {
 
     func fitCellSize() {
         guard canvasAvailableSize.width > 0, canvasAvailableSize.height > 0 else { return }
-        let fitW = (canvasAvailableSize.width  - 2 * Layout.padding - Layout.numW) / CGFloat(W)
+        let fitW = (canvasAvailableSize.width - 2 * Layout.padding - Layout.numW
+                    - (kind == .wedge ? Layout.totalsW : 0)) / CGFloat(W)
         let legend = DescriptorBuilder.legendHeight(DescriptorBuilder.legendStitches(stitches),
                                                     width: canvasAvailableSize.width,
                                                     noStitch: noStitch.joined().contains(true))
@@ -368,7 +377,7 @@ final class PatternDocument {
         tileCanvasSize = DescriptorBuilder.tileCanvasSize(
             H: H, W: W, cellSize: cs,
             hOn: showsColStrip, vOn: showsRowStrip,
-            stripWidth: tiling.stripWidth, stitches: stitches)
+            stripWidth: tiling.stripWidth, stitches: stitches, showsTotals: kind == .wedge)
         tileDescriptors = DescriptorBuilder.tileDescriptors(
             grid: grid, H: H, W: W, cellSize: cs,
             fillColor: fillColor.hex, bgColor: bgColor.hex,
@@ -376,7 +385,7 @@ final class PatternDocument {
             colStrip: colStrip, rowStrip: rowStrip, corner: corner,
             hOn: showsColStrip, vOn: showsRowStrip,
             stripWidth: tiling.stripWidth,
-            stitches: stitches, noStitch: noStitch)
+            stitches: stitches, noStitch: noStitch, totals: wedgeTotals)
     }
 
     private var tilingTask: Task<Void, Never>?

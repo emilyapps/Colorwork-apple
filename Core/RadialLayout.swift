@@ -56,12 +56,18 @@ enum RadialLayout {
         let hole = outer * holeFraction
         let band = (outer - hole) / CGFloat(H)
         var out = [RenderDescriptor]()
+        let all = rings(shaping, repeats: repeats, flipped: flipped).filter { $0.stitchCount > 0 }
 
-        for ring in rings(shaping, repeats: repeats, flipped: flipped) where ring.stitchCount > 0 {
+        // Outline every stitch or none: outlining only the roomier rings leaves a visible
+        // edge where the outlines stop. Outline only if even the tightest ring has room.
+        let outline = all.allSatisfy { ring in
+            2 * CGFloat.pi / CGFloat(ring.stitchCount) * (hole + CGFloat(ring.index + 1) * band) >= 4
+        }
+
+        for ring in all {
             let rIn = hole + CGFloat(ring.index) * band
             let rOut = rIn + band
             let step = 2 * CGFloat.pi / CGFloat(ring.stitchCount)
-            let outline = step * rOut >= 4
             for k in 0 ..< ring.stitchCount {
                 let col = ring.columns[k % ring.columns.count]
                 let fill = grid[H - ring.chartRow][col] ? fillColor : bgColor
