@@ -64,7 +64,7 @@ struct ControlPanelView: View {
                         set: { doc.H = $0; doc.W = $0 }))
                 } else {
                     IntSliderView(label: "W", range: 2...25, value: $doc.W)
-                    IntSliderView(label: "H", range: 2...25, value: $doc.H)
+                    IntSliderView(label: "H", range: 2...50, value: $doc.H)
                 }
             }
 
