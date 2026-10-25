@@ -28,6 +28,12 @@ enum Stitch: String, CaseIterable, Codable {
         }
     }
 
+    /// True when the stitch is its own Visual Equivalent under every Transformation,
+    /// so it can be painted in any Symmetry Group.
+    var looksTheSameUnderEveryTransformation: Bool {
+        self == .knit || self == .purl
+    }
+
     /// How many stitches this stitch adds (+) or removes (−) from the row.
     var stitchCountChange: Int {
         switch self {

@@ -20,7 +20,7 @@ struct StitchToolPicker: View {
                 ForEach(Stitch.allCases, id: \.self) { stitch in
                     toolButton(.stitch(stitch), help: stitch.displayName) {
                         StitchSymbolView(stitch: stitch)
-                            .opacity(doc.stitchToolsEnabled ? 1 : 0.35)
+                            .opacity(doc.canPaint(stitch) ? 1 : 0.35)
                     }
                 }
             }
@@ -44,7 +44,7 @@ struct StitchToolPicker: View {
                                          @ViewBuilder label: () -> Label) -> some View {
         let selected = doc.paintTool == tool
         return Button {
-            if case .stitch(let stitch) = tool, !doc.stitchToolsEnabled {
+            if case .stitch(let stitch) = tool, !doc.canPaint(stitch) {
                 pendingStitch = stitch
             } else {
                 doc.paintTool = tool

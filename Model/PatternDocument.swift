@@ -31,7 +31,7 @@ final class PatternDocument {
     var symmetryGroup: SymmetryGroup = .d4 {
         didSet {
             pushUndo("Change Symmetry")
-            if !stitchToolsEnabled { paintTool = .color }
+            if case .stitch(let s) = paintTool, !canPaint(s) { paintTool = .color }
             if symmetryGroup.requiresSquare {
                 isMutatingInternally = true
                 W = H
@@ -50,8 +50,11 @@ final class PatternDocument {
     }
     var paintTool: PaintTool = .color
 
-    /// Temporary guard until stitches follow symmetry (issue #3): stitches only under C1.
-    var stitchToolsEnabled: Bool { symmetryGroup == .c1 }
+    /// Knit and purl look the same however they're mirrored or rotated, so any group allows them.
+    /// Other stitches are C1-only until Visual Equivalents land (issue #3).
+    func canPaint(_ stitch: Stitch) -> Bool {
+        stitch.looksTheSameUnderEveryTransformation || symmetryGroup == .c1
+    }
 
     private(set) var domainCells:    [CellIndex] = []
     private(set) var domainSet:      Set<CellIndex> = []
@@ -185,10 +188,12 @@ final class PatternDocument {
         isDirty = true
     }
 
-    /// Paints a Stitch into a tile Cell without touching its color.
+    /// Paints a Stitch into a tile Cell, and every symmetric copy of it, without touching color.
     /// Border strips are color-only, so only the tile region takes stitches.
     func paintStitch(_ stitch: Stitch, at cell: CellIndex) {
-        stitches[cell.row][cell.col] = stitch
+        for member in symmetryGroup.orbit(cell.row, cell.col, H: H, W: W) {
+            stitches[member.row][member.col] = stitch
+        }
         rebuildTileDescriptors()
         isDirty = true
     }

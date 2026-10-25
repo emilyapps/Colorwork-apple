@@ -116,7 +116,7 @@ struct GridCanvasView: View {
             doc.toggleCell(cell, region: region)
         case .stitch(let stitch):
             // Border strips are color-only
-            if region == .tile && doc.stitchToolsEnabled { doc.paintStitch(stitch, at: cell) }
+            if region == .tile && doc.canPaint(stitch) { doc.paintStitch(stitch, at: cell) }
         }
     }
 

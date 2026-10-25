@@ -52,6 +52,29 @@ struct PatternDocumentStitchTests {
         #expect(doc.stitches[0][0] == .yarnOver)
     }
 
+    @Test(arguments: SymmetryGroup.allCases)
+    func knitAndPurlArePaintableInAnySymmetry(group: SymmetryGroup) {
+        let doc = PatternDocument()
+        doc.symmetryGroup = group
+        #expect(doc.canPaint(.knit))
+        #expect(doc.canPaint(.purl))
+    }
+
+    @Test func purlFillsEverySymmetricCopyOfTheCell() {
+        let doc = PatternDocument()
+        doc.symmetryGroup = .d4
+        doc.paintStitch(.purl, at: CellIndex(row: 0, col: 1))
+
+        let purls = doc.stitches.joined().filter { $0 == .purl }.count
+        #expect(purls == 8)
+        #expect(doc.stitches[0][doc.W - 2] == .purl)            // mirrored across the vertical axis
+        #expect(doc.stitches[doc.H - 1][1] == .purl)            // mirrored across the horizontal axis
+        #expect(doc.stitches[1][0] == .purl)                    // mirrored across the diagonal
+
+        doc.paintStitch(.knit, at: CellIndex(row: doc.H - 1, col: 1))
+        #expect(doc.stitches.joined().allSatisfy { $0 == .knit })
+    }
+
     @Test func clearResetsStitchesToKnit() {
         let doc = PatternDocument()
         doc.symmetryGroup = .c1
