@@ -120,6 +120,7 @@ _Avoid_: Flipped stitch, rotated stitch
 - A decrease leans away from its **Ended Column(s)**: k2tog ends the column to its left, ssk the column to its right, a centered double decrease one on each side
 - A decrease ends the *nearest live* column on its side, skipping columns already ended and cells holding another increase or decrease; rows are resolved from row 1 upward, so stacked decreases (a crown's decrease line) end successive columns
 - Columns wrap around at the chart's edges, because a chart is one repeat and its edge columns meet the next copy
+- Cancellation counts stitches, not symbols: a centered double decrease cancels two increases; with only one cancelled, its leftover ends the column on the side away from that increase
 - An increase's **Started Column** is its own column; **Lean** affects only its symbol
 - A Cell's color and **Stitch** are painted independently: painting a Stitch never changes the color, painting a color never changes the Stitch
 - Stitches are drawn with Craft Yarn Council (CYC) standard symbols, in black or white, whichever contrasts with the Cell's color; every chart shows a legend of the Stitches it uses
@@ -137,6 +138,7 @@ _Avoid_: Flipped stitch, rotated stitch
 ## Flagged ambiguities
 
 - **Known limitation:** within each row of the repeat, increases and decreases cancel one for one, *nearest first*; the leftovers are **Shaping**. This will choose the wrong stitch in charts where Shaping decreases sit among lace pairs (e.g. 2 yo + 3 decreases, with the intended Shaping one not the farthest). Revisit with a per-stitch override when real charts need it.
+- **Known limitation:** two Shaping increases stacked in the same column contradict each other (the upper one's **Started Column** would hide the lower one). Charts put successive increases in different columns; revisit if real charts need otherwise.
 - **Unconfirmed assumption:** which side a decrease's **Ended Column** falls on follows from its **Lean**. The knitter isn't certain this holds for all designs; it may need a per-stitch override.
 - "Horizontal/vertical reflection" was used three incompatible ways (named by axis in `SymmetryGroup`, by translation direction in `TilingSettings.hType`/`vType`, by motion in `stripHReflect`/`stripVReflect`), so the same left↔right flip was called "V" in one place and "H" in another — resolved: reflections are always named by their **axis**. Code mapping: `.d1`/D1V, `horizontalRepeatType = .reflection` and `stripReflectsAcrossVerticalAxis` are all a **reflection across a vertical axis**; `.d1h`/D1H, `verticalRepeatType = .reflection` and `stripReflectsAcrossHorizontalAxis` are all a **reflection across a horizontal axis**; `RepeatType.rotation` is a **half-turn**. The stored strings `"d1"`/`"d1h"` and the stored keys `hType`/`vType`/`stripHReflect`/`stripVReflect` must keep loading.
 - Lace "symmetry" means visual symmetry of the fabric, not geometric symmetry of the chart symbols — resolved: modeled via **Visual Equivalents**.

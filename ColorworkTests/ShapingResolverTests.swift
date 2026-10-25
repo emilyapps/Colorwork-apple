@@ -69,6 +69,53 @@ struct ShapingResolverTests {
         #expect(mask(grid([[nil, nil, nil, .ssk]])) == ["x..."])
     }
 
+    // MARK: Increases and balanced cancellation (#7)
+
+    @Test func anIncreaseMakesItsOwnColumnNoStitchBelowIt() {
+        let s = grid([[nil, nil, nil, nil],
+                      [nil, .m1r, nil, nil],
+                      [nil, nil, nil, nil],
+                      [nil, nil, nil, nil]])
+        #expect(mask(s) == ["....",
+                            "....",
+                            ".x..",
+                            ".x.."])
+        #expect(ShapingResolver.resolve(s).liveStitchesPerRow == [4, 4, 3, 3])
+    }
+
+    @Test func aBalancedLaceRowHasNoNoStitch() {
+        // k1, yo, k2tog, k1
+        #expect(mask(grid([[nil, .yarnOver, .k2tog, nil]])) == ["...."])
+        // yo, centered double decrease, yo
+        #expect(mask(grid([[nil, .yarnOver, .centeredDoubleDecrease, .yarnOver, nil]])) == ["....."])
+    }
+
+    @Test func theLeftoverDecreaseAmongLacePairsIsShaping() {
+        // 2 yo + 3 decreases: each yo cancels its nearest k2tog; the farthest k2tog ends a column.
+        let row: [Stitch?] = [nil, .yarnOver, .k2tog, nil, nil, .k2tog, .yarnOver, nil, nil, nil, .k2tog, nil]
+        #expect(mask(grid([row])) == [".........x.."])
+    }
+
+    @Test func aCenteredDoubleDecreaseWithOneStitchCancelledEndsTheOtherSide() {
+        #expect(mask(grid([[nil, .yarnOver, .centeredDoubleDecrease, nil, nil]])) == ["...x."])
+        #expect(mask(grid([[nil, nil, .centeredDoubleDecrease, .yarnOver, nil]])) == [".x..."])
+    }
+
+    @Test func publishedYokeChartGivesTheExpectedLiveStitches() {
+        // 12-stitch repeat, 32 rows; two increases at chart rows 2, 5, 8 and 32.
+        let H = 32, W = 12
+        var s = Stitch.allKnit(rows: H, cols: W)
+        func at(chartRow: Int, _ cols: Int...) { for c in cols { s[H - chartRow][c] = .m1l } }
+        at(chartRow: 2, 5, 6)
+        at(chartRow: 5, 3, 8)
+        at(chartRow: 8, 1, 10)
+        at(chartRow: 32, 0, 11)
+        let live = ShapingResolver.resolve(s).liveStitchesPerRow
+        func liveAt(_ chartRow: Int) -> Int { live[H - chartRow] }
+        #expect([1, 2, 5, 8, 32].map(liveAt) == [4, 6, 8, 10, 12])
+        #expect(liveAt(1) * 21 == 84 && liveAt(32) * 21 == 252)
+    }
+
     @Test func gapsReflectWithTheirDecreasesUnderD1V() {
         let doc = PatternDocument()
         doc.symmetryGroup = .d1
