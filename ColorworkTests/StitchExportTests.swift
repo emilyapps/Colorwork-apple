@@ -2,6 +2,7 @@
 // Exports draw the same stitch symbols and legend as the canvas, and all-knit
 // Patterns export exactly as before stitches existed.
 
+import CoreGraphics
 import Foundation
 import Testing
 @testable import Colorwork
@@ -52,6 +53,30 @@ struct StitchExportTests {
         let export = ExportTile.make(doc)
         #expect(export.size == doc.tileCanvasSize)
         #expect(export.descriptors.count == doc.tileDescriptors.count)
+    }
+
+    // MARK: PDF pages
+
+    @MainActor
+    @Test func pdfIsTwoLetterPages() async throws {
+        let doc = PatternDocument()
+        doc.tiling.hRepeat = true
+        doc.tiling.nCopies = 2
+        doc.rebuildDescriptors()
+        while doc.isComputingTiling { try await Task.sleep(for: .milliseconds(20)) }
+
+        let data = try PDFExporter.export(doc: doc)
+        let pdf = try #require(CGPDFDocument(CGDataProvider(data: data as CFData)!))
+        #expect(pdf.numberOfPages == 2)
+        for i in 1 ... pdf.numberOfPages {
+            #expect(pdf.page(at: i)?.getBoxRect(.mediaBox).size == CGSize(width: 612, height: 792))
+        }
+    }
+
+    @Test func tiledPageUsesTheChartsScaleWhenItFitsAndShrinksWhenItDoesNot() {
+        let chartScale: CGFloat = 1.5
+        #expect(PDFExporter.fitScale(CGSize(width: 200, height: 100), maxScale: chartScale) == chartScale)
+        #expect(PDFExporter.fitScale(CGSize(width: 2000, height: 100), maxScale: chartScale) < chartScale)
     }
 
     // MARK: All-knit Patterns are unchanged

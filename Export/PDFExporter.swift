@@ -35,47 +35,67 @@ enum Exporter {
 
 enum PDFExporter {
 
+    /// US Letter, in points, with half-inch margins.
+    static let pageSize = CGSize(width: 612, height: 792)
+    static let margin: CGFloat = 36
+
+    /// Scale for drawing content of `size` inside the page margins, capped at `maxScale`.
+    static func fitScale(_ size: CGSize, maxScale: CGFloat = .greatestFiniteMagnitude) -> CGFloat {
+        let box = CGSize(width: pageSize.width - 2 * margin, height: pageSize.height - 2 * margin)
+        return min(maxScale, box.width / size.width, box.height / size.height)
+    }
+
+    /// Page 1 is the chart with its legend; page 2 is the tiled pattern drawn with the same
+    /// cell size as page 1 when it fits, smaller when it doesn't. Both are Letter pages.
     static func export(doc: PatternDocument, includeTiling: Bool = true) throws -> Data {
         let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let data = NSMutableData()
-        guard let consumer = CGDataConsumer(data: data as CFMutableData) else {
+        var mediaBox = CGRect(origin: .zero, size: pageSize)
+        guard let consumer = CGDataConsumer(data: data as CFMutableData),
+              let ctx = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
             throw ExportError.renderingFailed
         }
 
         // ---- Page 1: Tile ----
-        var mediaBox = CGRect(origin: .zero, size: tileSize)
-        guard let ctx = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
-            throw ExportError.renderingFailed
-        }
+        let tileScale = fitScale(tileSize)
+        drawPage(tileDescs, size: tileSize, scale: tileScale, into: ctx)
 
-        ctx.beginPDFPage(nil)
-        applyYFlip(ctx, pageHeight: tileSize.height)
-        renderDescriptors(tileDescs, into: ctx)
-        ctx.endPDFPage()
-
-        // ---- Page 2: Tiling preview (optional) ----
-        if includeTiling && !doc.tilingDescriptors.isEmpty {
-            let cs     = CGFloat(doc.tiling.previewCellSize)
+        // ---- Page 2: Tiled pattern (optional) ----
+        if includeTiling && doc.tilingRows > 0 && doc.tilingCols > 0 {
+            let cs = CGFloat(doc.cellSize)
             let pad: CGFloat = 1
-            let previewW = CGFloat(doc.tilingCols) * cs + 2 * pad
-            let previewH = CGFloat(doc.tilingRows) * cs + 2 * pad
-            var previewBox = CGRect(x: 0, y: 0, width: previewW, height: previewH)
-            let mediaBoxData = NSData(bytes: &previewBox, length: MemoryLayout.size(ofValue: previewBox))
-            ctx.beginPDFPage([kCGPDFContextMediaBox: mediaBoxData] as CFDictionary)
-            applyYFlip(ctx, pageHeight: previewH)
-            renderDescriptors(doc.tilingDescriptors, into: ctx)
-            ctx.endPDFPage()
+            let tiling = DescriptorBuilder.tilingDescriptors(
+                tilingGrid: doc.tilingGrid,
+                fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
+                hRepeat: doc.tiling.hRepeat, vRepeat: doc.tiling.vRepeat,
+                stripWidth: doc.tiling.stripWidth,
+                horizontal: doc.tiling.horizontalRepeatType, vertical: doc.tiling.verticalRepeatType,
+                nCopies: doc.tiling.nCopies, W: doc.W, H: doc.H,
+                rowOffset: doc.tiling.rowOffset, colOffset: doc.tiling.colOffset,
+                cellSize: cs, padding: pad, stitchGrid: doc.tilingStitchGrid)
+            let size = CGSize(width: CGFloat(tiling.cols) * cs + 2 * pad,
+                              height: CGFloat(tiling.rows) * cs + 2 * pad)
+            drawPage(tiling.descriptors, size: size, scale: fitScale(size, maxScale: tileScale), into: ctx)
         }
 
         ctx.closePDF()
         return data as Data
     }
 
-    /// Y-flip so top-left-origin descriptors map into PDF's bottom-left origin.
-    private static func applyYFlip(_ ctx: CGContext, pageHeight: CGFloat) {
-        ctx.translateBy(x: 0, y: pageHeight)
+    /// One Letter page with the content scaled, centered horizontally and top-aligned.
+    /// The Y-flip maps top-left-origin descriptors into PDF's bottom-left origin.
+    private static func drawPage(_ descriptors: [RenderDescriptor], size: CGSize, scale: CGFloat,
+                                 into ctx: CGContext) {
+        ctx.beginPDFPage(nil)
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: pageSize.height)
         ctx.scaleBy(x: 1, y: -1)
+        ctx.translateBy(x: (pageSize.width - size.width * scale) / 2, y: margin)
+        ctx.scaleBy(x: scale, y: scale)
+        renderDescriptors(descriptors, into: ctx)
+        ctx.restoreGState()
+        ctx.endPDFPage()
     }
 }
 
