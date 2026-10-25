@@ -205,10 +205,11 @@ enum DescriptorBuilder {
         tilingGrid: [[Bool]],
         fillColor: String, bgColor: String,
         hRepeat: Bool, vRepeat: Bool, stripWidth: Int,
-        hType: RepeatType, vType: RepeatType,
+        horizontal: RepeatType, vertical: RepeatType,
         nCopies: Int, W: Int, H: Int,
         rowOffset: Int, colOffset: Int,
-        cellSize: CGFloat, padding: CGFloat = 1
+        cellSize: CGFloat, padding: CGFloat = 1,
+        stitchGrid: [[Stitch]] = []
     ) -> (descriptors: [RenderDescriptor], rows: Int, cols: Int) {
         let cs = cellSize
         let rows = tilingGrid.count
@@ -223,6 +224,10 @@ enum DescriptorBuilder {
                 out.append(.rect(.init(x: x0, y: y0, w: cs, h: cs,
                                        fill: fill, outline: "#cccccc", outlineWidth: 1,
                                        cell: nil, region: nil)))
+                if r < stitchGrid.count, c < stitchGrid[r].count {
+                    out += symbolDescriptors(stitchGrid[r][c], x0: x0, y0: y0, cellSize: cs,
+                                             ink: ColorMath.contrastInkHex(for: fill))
+                }
             }
         }
 

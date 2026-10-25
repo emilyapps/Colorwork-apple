@@ -13,18 +13,28 @@ struct TilingSettingsView: View {
             Section("Repeat") {
                 Toggle("Horizontal", isOn: $doc.tiling.hRepeat)
                 if doc.tiling.hRepeat {
-                    symmetryRow(label: "H type", binding: $doc.tiling.hType)
+                    repeatTypeRow(label: "Side by side", binding: $doc.tiling.horizontalRepeatType,
+                                  allowed: doc.allowedRepeatTypes(horizontal: true))
                 }
                 Toggle("Vertical", isOn: $doc.tiling.vRepeat)
                 if doc.tiling.vRepeat {
-                    symmetryRow(label: "V type", binding: $doc.tiling.vType)
+                    repeatTypeRow(label: "Stacked", binding: $doc.tiling.verticalRepeatType,
+                                  allowed: doc.allowedRepeatTypes(horizontal: false))
+                }
+                if !doc.limitingStitches.isEmpty {
+                    Text("Some repeat types are unavailable: "
+                         + doc.limitingStitches.map(\.displayName).joined(separator: ", ")
+                         + (doc.limitingStitches.count == 1 ? " has" : " have")
+                         + " no matching stitch under them yet.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
                 IntSliderView(label: "Copies", range: 2...5, value: $doc.tiling.nCopies)
             }
             Section("Border Strip") {
                 IntSliderView(label: "Width", range: 0...9, value: $doc.tiling.stripWidth)
-                Toggle("Reflect H", isOn: $doc.tiling.stripHReflect)
-                Toggle("Reflect V", isOn: $doc.tiling.stripVReflect)
+                Toggle("Reflect across vertical axis", isOn: $doc.tiling.stripReflectsAcrossVerticalAxis)
+                Toggle("Reflect across horizontal axis", isOn: $doc.tiling.stripReflectsAcrossHorizontalAxis)
             }
             Section("Brick Offset") {
                 IntSliderView(label: "Row →", range: 0...25, value: $doc.tiling.rowOffset)
@@ -35,11 +45,16 @@ struct TilingSettingsView: View {
         .onChange(of: doc.tiling) { _, _ in doc.rebuildDescriptors() }
     }
 
-    private func symmetryRow(label: String, binding: Binding<RepeatType>) -> some View {
+    /// Side-by-side copies reflect across a vertical axis; stacked copies across a horizontal one.
+    private func repeatTypeRow(label: String, binding: Binding<RepeatType>, allowed: [RepeatType]) -> some View {
         Picker(label, selection: binding) {
-            Text("Transl.").tag(RepeatType.translation)
-            Text("Reflect.").tag(RepeatType.reflection)
-            Text("180°").tag(RepeatType.rotation)
+            ForEach(allowed, id: \.self) { type in
+                switch type {
+                case .translation: Text("Translate").tag(type)
+                case .reflection:  Text("Reflect").tag(type)
+                case .rotation:    Text("Half-turn").tag(type)
+                }
+            }
         }
         .pickerStyle(.segmented)
     }

@@ -55,6 +55,16 @@ final class PatternDocument {
         return Set(SymmetryGroup.allCases.filter { $0.allows(used) })
     }
 
+    /// Repeat types offered for one direction, given the other direction's current type.
+    func allowedRepeatTypes(horizontal: Bool) -> [RepeatType] {
+        let used = Set(stitches.joined())
+        return RepeatType.allCases.filter { type in
+            horizontal
+                ? TilingEngine.allows(horizontal: type, vertical: tiling.verticalRepeatType, stitches: used)
+                : TilingEngine.allows(horizontal: tiling.horizontalRepeatType, vertical: type, stitches: used)
+        }
+    }
+
     /// Stitches in the Pattern that keep some groups from being offered, in catalog order.
     var limitingStitches: [Stitch] {
         let used = Set(stitches.joined())
@@ -132,6 +142,7 @@ final class PatternDocument {
 
     // Tiling grid is computed on a background task
     private(set) var tilingGrid:        [[Bool]] = []
+    private(set) var tilingStitchGrid: [[Stitch]] = []
     private(set) var tilingDescriptors: [RenderDescriptor] = []
     private(set) var tilingRows:        Int = 0
     private(set) var tilingCols:        Int = 0
@@ -184,15 +195,18 @@ final class PatternDocument {
         case .colStrip:
             PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &colStrip)
             PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &colStrip,
-                                            hReflect: tiling.stripHReflect, vReflect: tiling.stripVReflect)
+                                            acrossVerticalAxis: tiling.stripReflectsAcrossVerticalAxis,
+                                            acrossHorizontalAxis: tiling.stripReflectsAcrossHorizontalAxis)
         case .rowStrip:
             PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &rowStrip)
             PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &rowStrip,
-                                            hReflect: tiling.stripHReflect, vReflect: tiling.stripVReflect)
+                                            acrossVerticalAxis: tiling.stripReflectsAcrossVerticalAxis,
+                                            acrossHorizontalAxis: tiling.stripReflectsAcrossHorizontalAxis)
         case .corner:
             PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &corner)
             PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &corner,
-                                            hReflect: tiling.stripHReflect, vReflect: tiling.stripVReflect)
+                                            acrossVerticalAxis: tiling.stripReflectsAcrossVerticalAxis,
+                                            acrossHorizontalAxis: tiling.stripReflectsAcrossHorizontalAxis)
         }
         rebuildTileDescriptors()
         scheduleTilingRebuild()
@@ -203,14 +217,28 @@ final class PatternDocument {
     /// Visual Equivalent. If the current group doesn't allow the stitch, the group is downgraded
     /// first, with a notice. Border strips are color-only, so only the tile region takes stitches.
     func paintStitch(_ stitch: Stitch, at cell: CellIndex) {
+        let used = Set(stitches.joined()).union([stitch])
+        var changes: [String] = []
         if !symmetryGroup.allows([stitch]) {
             let old = symmetryGroup
             isDowngrading = true
-            symmetryGroup = old.largestGroupAllowing(Set(stitches.joined()).union([stitch]))
+            symmetryGroup = old.largestGroupAllowing(used)
             isDowngrading = false
-            symmetryNotice = "Symmetry changed from \(old.displayName) to \(symmetryGroup.displayName): "
-                + "\(stitch.displayName) has no matching stitch under \(old.displayName)'s other "
-                + "rotations or reflections yet. Undo to go back."
+            changes.append("symmetry from \(old.displayName) to \(symmetryGroup.displayName)")
+        }
+        // Repeat types follow the same rule; a disallowed one falls back to translation.
+        if !TilingEngine.allows(horizontal: tiling.horizontalRepeatType, vertical: .translation, stitches: used) {
+            tiling.horizontalRepeatType = .translation
+            changes.append("the horizontal repeat to Translate")
+        }
+        if !TilingEngine.allows(horizontal: tiling.horizontalRepeatType, vertical: tiling.verticalRepeatType,
+                                stitches: used) {
+            tiling.verticalRepeatType = .translation
+            changes.append("the vertical repeat to Translate")
+        }
+        if !changes.isEmpty {
+            symmetryNotice = "Changed " + changes.joined(separator: " and ") + ": \(stitch.displayName) "
+                + "has no matching stitch under those rotations or reflections yet. Undo to go back."
         }
         // The painted cell is written last, so a cell on an axis keeps the stitch you chose.
         let linked = symmetryGroup.linkedCells(cell.row, cell.col, H: H, W: W)
@@ -218,7 +246,7 @@ final class PatternDocument {
                          + linked.filter({ $0.transformation == .identity }) {
             if let s = stitch.visualEquivalent(under: t) { stitches[member.row][member.col] = s }
         }
-        rebuildTileDescriptors()
+        rebuildDescriptors()
         isDirty = true
     }
 
@@ -303,9 +331,19 @@ final class PatternDocument {
                 colStrip: snap.colStrip, rowStrip: snap.rowStrip, corner: snap.corner,
                 hRepeat: snap.tiling.hRepeat, vRepeat: snap.tiling.vRepeat,
                 stripWidth: snap.tiling.stripWidth,
-                hType: snap.tiling.hType, vType: snap.tiling.vType,
+                horizontal: snap.tiling.horizontalRepeatType, vertical: snap.tiling.verticalRepeatType,
                 nH: snap.tiling.nCopies, nV: snap.tiling.nCopies,
                 rowOffset: snap.tiling.rowOffset, colOffset: snap.tiling.colOffset)
+            // Strips are color-only, so their cells tile as knit.
+            let stitchGrid = TilingEngine.buildTilingGrid(
+                tile: snap.stitches, H: snap.H, W: snap.W,
+                colStrip: [], rowStrip: [], corner: [], empty: Stitch.knit,
+                hRepeat: snap.tiling.hRepeat, vRepeat: snap.tiling.vRepeat,
+                stripWidth: snap.tiling.stripWidth,
+                horizontal: snap.tiling.horizontalRepeatType, vertical: snap.tiling.verticalRepeatType,
+                nH: snap.tiling.nCopies, nV: snap.tiling.nCopies,
+                rowOffset: snap.tiling.rowOffset, colOffset: snap.tiling.colOffset,
+                copy: { s, t in s.visualEquivalent(under: t) ?? s })
             guard !Task.isCancelled else { return }
             let cs = CGFloat(snap.tiling.previewCellSize)
             let (descs, rows, cols) = DescriptorBuilder.tilingDescriptors(
@@ -313,14 +351,15 @@ final class PatternDocument {
                 fillColor: snap.fillHex, bgColor: snap.bgHex,
                 hRepeat: snap.tiling.hRepeat, vRepeat: snap.tiling.vRepeat,
                 stripWidth: snap.tiling.stripWidth,
-                hType: snap.tiling.hType, vType: snap.tiling.vType,
+                horizontal: snap.tiling.horizontalRepeatType, vertical: snap.tiling.verticalRepeatType,
                 nCopies: snap.tiling.nCopies,
                 W: snap.W, H: snap.H,
                 rowOffset: snap.tiling.rowOffset, colOffset: snap.tiling.colOffset,
-                cellSize: cs)
+                cellSize: cs, stitchGrid: stitchGrid)
             guard !Task.isCancelled else { return }
             await MainActor.run { [weak self] in
                 self?.tilingGrid        = tg
+                self?.tilingStitchGrid  = stitchGrid
                 self?.tilingDescriptors = descs
                 self?.tilingRows        = rows
                 self?.tilingCols        = cols
@@ -334,6 +373,7 @@ final class PatternDocument {
 
 private struct TilingSnapshot {
     let grid: [[Bool]]
+    let stitches: [[Stitch]]
     let H, W: Int
     let colStrip, rowStrip, corner: [[Bool]]
     let tiling: TilingSettings
@@ -341,6 +381,7 @@ private struct TilingSnapshot {
 
     init(from doc: PatternDocument) {
         grid     = doc.grid
+        stitches = doc.stitches
         H        = min(doc.H, doc.grid.count)
         W        = min(doc.W, doc.grid.first?.count ?? 0)
         colStrip = doc.colStrip

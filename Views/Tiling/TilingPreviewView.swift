@@ -55,6 +55,9 @@ struct TilingPreviewView: View {
         let fillColor = ColorMath.color(from: doc.fillColor.hex)
         let bgColor   = ColorMath.color(from: doc.bgColor.hex)
         let grid      = doc.tilingGrid
+        let stitches  = doc.tilingStitchGrid
+        let inkOnFill = ColorMath.color(from: ColorMath.contrastInkHex(for: doc.fillColor.hex))
+        let inkOnBg   = ColorMath.color(from: ColorMath.contrastInkHex(for: doc.bgColor.hex))
 
         for r in 0 ..< doc.tilingRows {
             for c in 0 ..< doc.tilingCols {
@@ -63,6 +66,29 @@ struct TilingPreviewView: View {
                 if cs >= 4 {
                     ctx.stroke(Path(rect), with: .color(.gray.opacity(0.25)), lineWidth: 0.5)
                 }
+                if cs >= 6, r < stitches.count, c < stitches[r].count {
+                    drawSymbol(stitches[r][c], in: ctx, at: rect.origin, cellSize: cs,
+                               ink: grid[r][c] ? inkOnFill : inkOnBg)
+                }
+            }
+        }
+    }
+
+    private func drawSymbol(_ stitch: Stitch, in ctx: GraphicsContext, at o: CGPoint,
+                            cellSize cs: CGFloat, ink: Color) {
+        let width = max(0.75, cs * 0.05)
+        for stroke in stitch.symbol {
+            switch stroke {
+            case .line(let a, let b):
+                var path = Path()
+                path.move(to: CGPoint(x: o.x + a.x * cs, y: o.y + a.y * cs))
+                path.addLine(to: CGPoint(x: o.x + b.x * cs, y: o.y + b.y * cs))
+                ctx.stroke(path, with: .color(ink), lineWidth: width)
+            case .circle(let center, let r, let filled):
+                let path = Path(ellipseIn: CGRect(x: o.x + (center.x - r) * cs, y: o.y + (center.y - r) * cs,
+                                                  width: 2 * r * cs, height: 2 * r * cs))
+                if filled { ctx.fill(path, with: .color(ink)) }
+                else      { ctx.stroke(path, with: .color(ink), lineWidth: width) }
             }
         }
     }

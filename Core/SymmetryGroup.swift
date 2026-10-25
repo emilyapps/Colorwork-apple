@@ -42,6 +42,21 @@ enum Transformation: CaseIterable {
         case .antiDiagonalAxisReflection: return CellIndex(row: N - 1 - c, col: N - 1 - r)
         }
     }
+
+    /// The Transformation that flips rows and/or columns of a rectangle.
+    static func flipping(rows: Bool, cols: Bool) -> Transformation {
+        switch (rows, cols) {
+        case (false, false): return .identity
+        case (false, true):  return .verticalAxisReflection
+        case (true, false):  return .horizontalAxisReflection
+        case (true, true):   return .halfTurn
+        }
+    }
+
+    /// True when every stitch has a Visual Equivalent under this Transformation (ADR 0001).
+    func allows(_ stitches: some Sequence<Stitch>) -> Bool {
+        Set(stitches).allSatisfy { $0.visualEquivalent(under: self) != nil }
+    }
 }
 
 // MARK: - SymmetryGroup
