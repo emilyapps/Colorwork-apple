@@ -40,12 +40,15 @@ final class PatternStore {
             tilingData:    nil)
         pattern.thumbnailData = thumb
         pattern.stitchData    = try encoder.encode(doc.stitches)
+        pattern.kind          = doc.kind.rawValue
         context.insert(pattern)
         try context.save()
     }
 
     func loadPattern(_ pattern: SDPattern, into doc: PatternDocument) {
         guard let grid = try? decoder.decode([[Bool]].self, from: pattern.gridData) else { return }
+        // Patterns carry their Kind but not N, so the current Radial Repeat is kept.
+        doc.kind          = pattern.kind.flatMap(PatternKind.init(rawValue:)) ?? .tile
 
         doc.H             = pattern.gridH
         doc.W             = pattern.gridW
@@ -88,7 +91,7 @@ final class PatternStore {
             grid: doc.grid, H: doc.H, W: doc.W,
             fillHex: doc.fillColor.hex, bgHex: doc.bgColor.hex,
             colStrip: doc.colStrip, rowStrip: doc.rowStrip,
-            tiling: doc.tiling)
+            tiling: doc.kind == .tile ? doc.tiling : TilingSettings())
         context.insert(project)
         try context.save()
     }

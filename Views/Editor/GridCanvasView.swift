@@ -63,38 +63,7 @@ struct GridCanvasView: View {
     // MARK: - Drawing
 
     private func draw(_ ctx: GraphicsContext) {
-        for descriptor in doc.tileDescriptors {
-            switch descriptor {
-            case .rect(let r):
-                let rect = CGRect(x: r.x, y: r.y, width: r.w, height: r.h)
-                ctx.fill(Path(rect), with: .color(ColorMath.color(from: r.fill)))
-                if r.outlineWidth > 0 {
-                    ctx.stroke(Path(rect),
-                               with: .color(ColorMath.color(from: r.outline)),
-                               lineWidth: r.outlineWidth)
-                }
-            case .text(let t):
-                ctx.draw(
-                    Text(t.text)
-                        .font(.system(size: t.fontSize))
-                        .foregroundColor(ColorMath.color(from: t.fill)),
-                    at: CGPoint(x: t.x, y: t.y),
-                    anchor: t.leading ? .leading : .center)
-            case .line(let l):
-                var path = Path()
-                path.move(to: CGPoint(x: l.x1, y: l.y1))
-                path.addLine(to: CGPoint(x: l.x2, y: l.y2))
-                ctx.stroke(path,
-                           with: .color(ColorMath.color(from: l.fill)),
-                           lineWidth: l.width)
-            case .circle(let c):
-                let path = Path(ellipseIn: CGRect(x: c.cx - c.r, y: c.cy - c.r,
-                                                  width: 2 * c.r, height: 2 * c.r))
-                let color = ColorMath.color(from: c.fill)
-                if c.filled { ctx.fill(path, with: .color(color)) }
-                else        { ctx.stroke(path, with: .color(color), lineWidth: c.width) }
-            }
-        }
+        drawDescriptors(doc.tileDescriptors, in: ctx)
     }
 
     // MARK: - Interaction
@@ -181,6 +150,42 @@ private struct SymmetryNoticeBanner: View {
                 try? await Task.sleep(for: .seconds(8))
                 doc.symmetryNotice = nil
             }
+        }
+    }
+}
+
+/// Draws render descriptors into a SwiftUI Canvas; shared by every on-screen chart.
+func drawDescriptors(_ descriptors: [RenderDescriptor], in ctx: GraphicsContext) {
+    for descriptor in descriptors {
+        switch descriptor {
+        case .rect(let r):
+            let rect = CGRect(x: r.x, y: r.y, width: r.w, height: r.h)
+            ctx.fill(Path(rect), with: .color(ColorMath.color(from: r.fill)))
+            if r.outlineWidth > 0 {
+                ctx.stroke(Path(rect),
+                           with: .color(ColorMath.color(from: r.outline)),
+                           lineWidth: r.outlineWidth)
+            }
+        case .text(let t):
+            ctx.draw(
+                Text(t.text)
+                    .font(.system(size: t.fontSize))
+                    .foregroundColor(ColorMath.color(from: t.fill)),
+                at: CGPoint(x: t.x, y: t.y),
+                anchor: t.leading ? .leading : .center)
+        case .line(let l):
+            var path = Path()
+            path.move(to: CGPoint(x: l.x1, y: l.y1))
+            path.addLine(to: CGPoint(x: l.x2, y: l.y2))
+            ctx.stroke(path,
+                       with: .color(ColorMath.color(from: l.fill)),
+                       lineWidth: l.width)
+        case .circle(let c):
+            let path = Path(ellipseIn: CGRect(x: c.cx - c.r, y: c.cy - c.r,
+                                              width: 2 * c.r, height: 2 * c.r))
+            let color = ColorMath.color(from: c.fill)
+            if c.filled { ctx.fill(path, with: .color(color)) }
+            else        { ctx.stroke(path, with: .color(color), lineWidth: c.width) }
         }
     }
 }

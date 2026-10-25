@@ -100,12 +100,14 @@ enum SymmetryGroup: String, CaseIterable, Codable {
         return Set(stitches).allSatisfy { s in ts.allSatisfy { s.visualEquivalent(under: $0) != nil } }
     }
 
-    /// The largest group within this one that allows the stitches (C1 always does).
-    func largestGroupAllowing(_ stitches: some Sequence<Stitch>) -> SymmetryGroup {
+    /// The largest group within this one that allows the stitches and is in `among`
+    /// (C1 always qualifies).
+    func largestGroupAllowing(_ stitches: some Sequence<Stitch>,
+                              among: Set<SymmetryGroup> = Set(SymmetryGroup.allCases)) -> SymmetryGroup {
         let mine = Set(transformations)
         let distinct = Set(stitches)
         return SymmetryGroup.allCases
-            .filter { Set($0.transformations).isSubset(of: mine) && $0.allows(distinct) }
+            .filter { among.contains($0) && Set($0.transformations).isSubset(of: mine) && $0.allows(distinct) }
             .max { $0.transformations.count < $1.transformations.count } ?? .c1
     }
 

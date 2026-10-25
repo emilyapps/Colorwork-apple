@@ -262,6 +262,59 @@ enum DescriptorBuilder {
         return out
     }
 
+    // MARK: Wedge Chart View
+
+    static let chartTotalsWidth: CGFloat = 84
+
+    /// A Wedge's Chart View: N copies side by side, No Stitch gray, with the stitch total
+    /// at the right of row 1 and of every row where the count changes.
+    static func wedgeChartDescriptors(
+        grid: [[Bool]], stitches: [[Stitch]], shaping: ShapingResolver.Result,
+        repeats: Int, cellSize cs: CGFloat, fillColor: String, bgColor: String,
+        padding: CGFloat = 1
+    ) -> (descriptors: [RenderDescriptor], size: CGSize) {
+        let H = grid.count
+        let W = grid.first?.count ?? 0
+        var out = [RenderDescriptor]()
+        for n in 0 ..< repeats {
+            for r in 0 ..< H {
+                for c in 0 ..< W {
+                    let x0 = padding + CGFloat(n * W + c) * cs
+                    let y0 = padding + CGFloat(r) * cs
+                    let gap = shaping.noStitch[r][c]
+                    let fill = gap ? Layout.noStitchFill : grid[r][c] ? fillColor : bgColor
+                    out.append(.rect(.init(x: x0, y: y0, w: cs, h: cs, fill: fill,
+                                           outline: "#cccccc", outlineWidth: cs >= 4 ? 0.5 : 0,
+                                           cell: nil, region: nil)))
+                    if !gap && cs >= 6 {
+                        out += symbolDescriptors(stitches[r][c], x0: x0, y0: y0, cellSize: cs,
+                                                 ink: ColorMath.contrastInkHex(for: fill))
+                    }
+                }
+            }
+        }
+        let chartW = CGFloat(repeats * W) * cs
+        let chartH = CGFloat(H) * cs
+        for n in 1 ..< max(1, repeats) {
+            let x = padding + CGFloat(n * W) * cs
+            out.append(.line(.init(x1: x, y1: padding, x2: x, y2: padding + chartH,
+                                   fill: "#888888", width: 1)))
+        }
+        // Bottom to top; a label that would overlap the one below it moves up just enough.
+        let fontSize = max(8, min(11, cs))
+        var lowestFreeY = CGFloat.greatestFiniteMagnitude
+        for total in shaping.totals(repeats: repeats) {
+            let y = min(padding + CGFloat(H - total.row) * cs + cs / 2, lowestFreeY)
+            lowestFreeY = y - fontSize - 1
+            out.append(.text(.init(x: padding + chartW + 6, y: y,
+                                   text: "Row \(total.row): \(total.stitches)",
+                                   fontSize: fontSize, fill: "#555555", leading: true)))
+        }
+        // Room below the chart for the row-1 label, which is centered on the bottom row.
+        return (out, CGSize(width: chartW + 2 * padding + chartTotalsWidth,
+                            height: chartH + 2 * padding + fontSize / 2))
+    }
+
     // MARK: get_tiling_descriptors — port of pattern_core.py:get_tiling_descriptors
     static func tilingDescriptors(
         tilingGrid: [[Bool]],

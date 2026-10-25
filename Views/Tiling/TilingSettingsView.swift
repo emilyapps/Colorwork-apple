@@ -8,8 +8,23 @@ struct TilingSettingsView: View {
     @Environment(PatternDocument.self) var doc
 
     var body: some View {
+        if doc.kind == .wedge { radialRepeatForm } else { tilingForm }
+    }
+
+    /// A Wedge repeats N times around a circle; border strips and planar repeats don't apply.
+    private var radialRepeatForm: some View {
         @Bindable var doc = doc
-        Form {
+        return Form {
+            Section("Radial Repeat") {
+                Stepper("Repeats: \(doc.radialRepeat)", value: $doc.radialRepeat, in: 1...60)
+            }
+        }
+        .formStyle(.grouped)
+    }
+
+    private var tilingForm: some View {
+        @Bindable var doc = doc
+        return Form {
             Section("Repeat") {
                 Toggle("Horizontal", isOn: $doc.tiling.hRepeat)
                 if doc.tiling.hRepeat {
@@ -69,13 +84,15 @@ struct TilingSheetView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                TilingPreviewView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if doc.kind == .wedge { WedgeChartView() } else { TilingPreviewView() }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Divider()
                 TilingSettingsView()
-                    .frame(maxWidth: .infinity, maxHeight: 300)
+                    .frame(maxWidth: .infinity, maxHeight: doc.kind == .wedge ? 120 : 300)
             }
-            .navigationTitle("Tiling")
+            .navigationTitle(doc.kind == .wedge ? "Chart View" : "Tiling")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

@@ -11,6 +11,20 @@ enum ShapingResolver {
         let noStitch: [[Bool]]
         /// Cells that exist in each row, indexed like the stitch grid.
         let liveStitchesPerRow: [Int]
+
+        /// Stitches around (live cells × repeats) on row 1 and on every row where the count
+        /// changes from the row below, bottom to top. Rows are chart rows (row 1 at the bottom).
+        func totals(repeats: Int) -> [(row: Int, stitches: Int)] {
+            let H = liveStitchesPerRow.count
+            var out: [(row: Int, stitches: Int)] = []
+            for chartRow in 1 ... max(1, H) where H > 0 {
+                let live = liveStitchesPerRow[H - chartRow]
+                if chartRow == 1 || live != liveStitchesPerRow[H - chartRow + 1] {
+                    out.append((chartRow, live * repeats))
+                }
+            }
+            return out
+        }
     }
 
     /// Rows are resolved from row 1 (the bottom) upward. In each row, increases and decreases

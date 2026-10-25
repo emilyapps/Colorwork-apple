@@ -7,6 +7,12 @@ import Foundation
 import Observation
 import CoreGraphics
 
+/// What a Pattern is charted as: a Tile repeated across a plane, or a Wedge repeated
+/// N times around a circle (Radial Repeat).
+enum PatternKind: String, Codable, CaseIterable {
+    case tile, wedge
+}
+
 @Observable
 final class PatternDocument {
 
@@ -42,6 +48,40 @@ final class PatternDocument {
 
     fileprivate var isMutatingInternally = false
 
+    // MARK: - Pattern Kind
+
+    /// Change with `setKind(_:)` so the change is undoable and symmetry follows the rule.
+    var kind: PatternKind = .tile
+
+    /// Radial Repeat count N for a Wedge; stored in Projects, not Patterns.
+    var radialRepeat: Int = 8
+
+    /// A Wedge allows only C1 or D1V, even without Shaping.
+    static let wedgeSymmetryGroups: Set<SymmetryGroup> = [.c1, .d1]
+
+    /// Border strips belong to Tiles; a Wedge hides them but keeps them.
+    var showsColStrip: Bool { kind == .tile && tiling.hRepeat }
+    var showsRowStrip: Bool { kind == .tile && tiling.vRepeat }
+
+    /// Switches Pattern Kind as one undoable step. Tile → Wedge downgrades the symmetry
+    /// to C1 or D1V, with a notice.
+    func setKind(_ newKind: PatternKind) {
+        guard newKind != kind else { return }
+        pushUndo("Change Pattern Kind")
+        kind = newKind
+        if kind == .wedge && !Self.wedgeSymmetryGroups.contains(symmetryGroup) {
+            let old = symmetryGroup
+            isDowngrading = true
+            symmetryGroup = old.largestGroupAllowing(stitches.joined(), among: Self.wedgeSymmetryGroups)
+            isDowngrading = false
+            symmetryNotice = "Changed symmetry from \(old.displayName) to \(symmetryGroup.displayName): "
+                + "a Wedge allows only C1 or D1V. Undo to go back."
+        }
+        rebuildDescriptors()
+        fitCellSize()
+        isDirty = true
+    }
+
     // MARK: - Paint tool
     enum PaintTool: Equatable {
         case color
@@ -52,7 +92,8 @@ final class PatternDocument {
     /// Groups whose every Transformation has a Visual Equivalent for every stitch in the Pattern.
     var allowedSymmetryGroups: Set<SymmetryGroup> {
         let used = Set(stitches.joined())
-        return Set(SymmetryGroup.allCases.filter { $0.allows(used) })
+        let groups = Set(SymmetryGroup.allCases.filter { $0.allows(used) })
+        return kind == .wedge ? groups.intersection(Self.wedgeSymmetryGroups) : groups
     }
 
     /// Repeat types offered for one direction, given the other direction's current type.
@@ -115,7 +156,7 @@ final class PatternDocument {
         let snapshot = PatternSnapshot(from: self)
         undoManager?.registerUndo(withTarget: self) { doc in
             doc.pushUndo(name)
-            snapshot.apply(to: doc)
+            snapshot.apply(to: doc, restoringRadialRepeat: false)
             doc.canUndo = doc.undoManager?.canUndo ?? false
             doc.canRedo = doc.undoManager?.canRedo ?? false
         }
@@ -229,7 +270,8 @@ final class PatternDocument {
         if !symmetryGroup.allows([stitch]) {
             let old = symmetryGroup
             isDowngrading = true
-            symmetryGroup = old.largestGroupAllowing(used)
+            symmetryGroup = old.largestGroupAllowing(
+                used, among: kind == .wedge ? Self.wedgeSymmetryGroups : Set(SymmetryGroup.allCases))
             isDowngrading = false
             changes.append("symmetry from \(old.displayName) to \(symmetryGroup.displayName)")
         }
@@ -316,14 +358,14 @@ final class PatternDocument {
         let cs = CGFloat(cellSize)
         tileCanvasSize = DescriptorBuilder.tileCanvasSize(
             H: H, W: W, cellSize: cs,
-            hOn: tiling.hRepeat, vOn: tiling.vRepeat,
+            hOn: showsColStrip, vOn: showsRowStrip,
             stripWidth: tiling.stripWidth, stitches: stitches)
         tileDescriptors = DescriptorBuilder.tileDescriptors(
             grid: grid, H: H, W: W, cellSize: cs,
             fillColor: fillColor.hex, bgColor: bgColor.hex,
             domainCells: domainSet, showDomain: showDomain,
             colStrip: colStrip, rowStrip: rowStrip, corner: corner,
-            hOn: tiling.hRepeat, vOn: tiling.vRepeat,
+            hOn: showsColStrip, vOn: showsRowStrip,
             stripWidth: tiling.stripWidth,
             stitches: stitches, noStitch: noStitch)
     }
@@ -430,6 +472,8 @@ struct PatternSnapshot: Codable {
     var fillHex:        String
     var bgHex:          String
     var tiling:         TilingSettings
+    var kind:           PatternKind?  // nil in snapshots saved before Wedges existed (a Tile)
+    var radialRepeat:   Int?
 
     init(from doc: PatternDocument) {
         H             = doc.H
@@ -446,10 +490,15 @@ struct PatternSnapshot: Codable {
         fillHex       = doc.fillColor.hex
         bgHex         = doc.bgColor.hex
         tiling        = doc.tiling
+        kind          = doc.kind
+        radialRepeat  = doc.radialRepeat
     }
 
-    func apply(to doc: PatternDocument) {
+    /// Undo restores the chart but not N, which is a Project setting rather than an edit.
+    func apply(to doc: PatternDocument, restoringRadialRepeat: Bool = true) {
         doc.symmetryNotice = nil
+        doc.kind          = kind ?? .tile
+        if restoringRadialRepeat, let radialRepeat { doc.radialRepeat = radialRepeat }
         doc.isMutatingInternally = true
         doc.H             = H
         doc.W             = W

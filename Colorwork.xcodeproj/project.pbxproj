@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7EDCFDFA2C7AF509684AE8F6 /* WedgeChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C104BFC7988AA1A4DD266B2 /* WedgeChartView.swift */; };
 		C82B598B2F8AA2EB003CDF73 /* ColorPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82B598A2F8AA2EB003CDF73 /* ColorPreviewView.swift */; };
 		C82B598D2F8AD37E003CDF73 /* GestureOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */; };
 		C87A4F932F85EA2100F12544 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C87A4F912F85EA2100F12544 /* ContentView.swift */; };
@@ -62,6 +63,7 @@
 
 /* Begin PBXFileReference section */
 		0D337A1F0291803BD7862BA0 /* StitchToolPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StitchToolPicker.swift; sourceTree = "<group>"; };
+		1C104BFC7988AA1A4DD266B2 /* WedgeChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WedgeChartView.swift; sourceTree = "<group>"; };
 		9A97FC57EC68B0581756C636 /* Stitch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stitch.swift; sourceTree = "<group>"; };
 		C82B598A2F8AA2EB003CDF73 /* ColorPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPreviewView.swift; sourceTree = "<group>"; };
 		C82B598C2F8AD37E003CDF73 /* GestureOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureOverlayView.swift; sourceTree = "<group>"; };
@@ -269,6 +271,7 @@
 			isa = PBXGroup;
 			children = (
 				C87A4FBD2F85EAAF00F12544 /* TilingPreviewView.swift */,
+				1C104BFC7988AA1A4DD266B2 /* WedgeChartView.swift */,
 				C87A4FBE2F85EAAF00F12544 /* TilingSettingsView.swift */,
 			);
 			path = Tiling;
@@ -438,6 +441,7 @@
 				C87A4FC62F85EAAF00F12544 /* ColorCompareView.swift in Sources */,
 				C87A4FC72F85EAAF00F12544 /* PatternStore.swift in Sources */,
 				C87A4FC82F85EAAF00F12544 /* TilingPreviewView.swift in Sources */,
+				7EDCFDFA2C7AF509684AE8F6 /* WedgeChartView.swift in Sources */,
 				C87A4FC92F85EAAF00F12544 /* HSLSlidersView.swift in Sources */,
 				C87A4FCA2F85EAAF00F12544 /* NamedPaletteView.swift in Sources */,
 				C87A4FCB2F85EAAF00F12544 /* TilingEngine.swift in Sources */,

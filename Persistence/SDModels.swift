@@ -24,6 +24,7 @@ final class SDPattern {
     var rowStripData:   Data?
     var cornerData:     Data?
     var stitchData:     Data?              // JSONEncoder([[Stitch]]); nil = all knit
+    var kind:           String?            // PatternKind raw value; nil = tile
     var tilingData:     Data?              // JSONEncoder(TilingSettings)
     var thumbnailData:  Data?              // PNG rendered at save time
 

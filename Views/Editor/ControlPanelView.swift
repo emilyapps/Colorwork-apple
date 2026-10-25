@@ -9,6 +9,15 @@ struct ControlPanelView: View {
     var body: some View {
         @Bindable var doc = doc
         Form {
+            Section("Pattern Kind") {
+                Picker("Pattern Kind", selection: Binding(get: { doc.kind }, set: { doc.setKind($0) })) {
+                    Text("Tile").tag(PatternKind.tile)
+                    Text("Wedge").tag(PatternKind.wedge)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
             Section("Symmetry") {
                 HStack {
                     Text("Rotation")

@@ -62,7 +62,8 @@ enum PDFExporter {
         drawPage(tileDescs, size: tileSize, scale: tileScale, into: ctx)
 
         // ---- Page 2: Tiled pattern (optional) ----
-        if includeTiling && doc.tilingRows > 0 && doc.tilingCols > 0 {
+        // A Wedge's page 2 will be its Circular View (#10); until then it has no page 2.
+        if includeTiling && doc.kind == .tile && doc.tilingRows > 0 && doc.tilingCols > 0 {
             let cs = CGFloat(doc.cellSize)
             let pad: CGFloat = 1
             let tiling = DescriptorBuilder.tilingDescriptors(
@@ -153,14 +154,14 @@ enum ExportTile {
     static func make(_ doc: PatternDocument) -> (size: CGSize, descriptors: [RenderDescriptor]) {
         let size = DescriptorBuilder.tileCanvasSize(
             H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
+            hOn: doc.showsColStrip, vOn: doc.showsRowStrip,
             stripWidth: doc.tiling.stripWidth, stitches: doc.stitches)
         let descriptors = DescriptorBuilder.tileDescriptors(
             grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
             fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
             domainCells: doc.domainSet, showDomain: false,
             colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
+            hOn: doc.showsColStrip, vOn: doc.showsRowStrip,
             stripWidth: doc.tiling.stripWidth, stitches: doc.stitches,
             noStitch: ShapingResolver.resolve(doc.stitches).noStitch)
         return (size, descriptors)
