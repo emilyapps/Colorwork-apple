@@ -30,12 +30,13 @@ enum Stitch: String, CaseIterable, Codable {
 
     /// The Stitch that looks like this one after a Transformation, as judged by a knitter (ADR 0001).
     /// nil means nothing looks equivalent, so a Symmetry Group with that Transformation is not allowed.
-    /// Only identity and vertical-axis reflection are defined for stitches with a direction;
+    /// Only identity and vertical-axis reflection are defined for shaping stitches; a yarn over
+    /// alone makes a wedge, and only pairs with decreases into turn-symmetric lace;
     /// adding entries here enables more symmetry for lace with no engine changes.
     func visualEquivalent(under t: Transformation) -> Stitch? {
         switch (self, t) {
         case (_, .identity):                          return self
-        case (.knit, _), (.purl, _), (.yarnOver, _):  return self
+        case (.knit, _), (.purl, _):                  return self
         case (_, .verticalAxisReflection):
             switch self {
             case .k2tog: return .ssk

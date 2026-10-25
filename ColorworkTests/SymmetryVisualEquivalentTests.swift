@@ -73,13 +73,12 @@ struct SymmetryVisualEquivalentTests {
         #expect(SymmetryGroup.allCases.allSatisfy { $0.allows([.knit]) })
     }
 
-    @Test(arguments: [Stitch.purl, .yarnOver])
-    func directionlessStitchesAllowEveryGroup(stitch: Stitch) {
-        #expect(SymmetryGroup.allCases.allSatisfy { $0.allows([.knit, stitch]) })
+    @Test func purlAllowsEveryGroup() {
+        #expect(SymmetryGroup.allCases.allSatisfy { $0.allows([.knit, .purl]) })
     }
 
-    @Test(arguments: [Stitch.k2tog, .ssk, .k3tog, .sssk, .centeredDoubleDecrease, .m1r, .m1l])
-    func decreasesAndLeaningIncreasesAllowOnlyC1AndD1V(stitch: Stitch) {
+    @Test(arguments: [Stitch.k2tog, .ssk, .k3tog, .sssk, .centeredDoubleDecrease, .yarnOver, .m1r, .m1l])
+    func shapingStitchesAllowOnlyC1AndD1V(stitch: Stitch) {
         let allowed = Set(SymmetryGroup.allCases.filter { $0.allows([stitch]) })
         #expect(allowed == [.c1, .d1])
     }
