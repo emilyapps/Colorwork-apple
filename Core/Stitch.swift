@@ -28,10 +28,26 @@ enum Stitch: String, CaseIterable, Codable {
         }
     }
 
-    /// True when the stitch is its own Visual Equivalent under every Transformation,
-    /// so it can be painted in any Symmetry Group.
-    var looksTheSameUnderEveryTransformation: Bool {
-        self == .knit || self == .purl
+    /// The Stitch that looks like this one after a Transformation, as judged by a knitter (ADR 0001).
+    /// nil means nothing looks equivalent, so a Symmetry Group with that Transformation is not allowed.
+    /// Only identity and vertical-axis reflection are defined for stitches with a direction;
+    /// adding entries here enables more symmetry for lace with no engine changes.
+    func visualEquivalent(under t: Transformation) -> Stitch? {
+        switch (self, t) {
+        case (_, .identity):                          return self
+        case (.knit, _), (.purl, _), (.yarnOver, _):  return self
+        case (_, .verticalAxisReflection):
+            switch self {
+            case .k2tog: return .ssk
+            case .ssk:   return .k2tog
+            case .k3tog: return .sssk
+            case .sssk:  return .k3tog
+            case .m1r:   return .m1l
+            case .m1l:   return .m1r
+            default:     return self
+            }
+        default:                                      return nil
+        }
     }
 
     /// How many stitches this stitch adds (+) or removes (−) from the row.

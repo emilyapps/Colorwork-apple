@@ -7,9 +7,6 @@ import SwiftUI
 struct StitchToolPicker: View {
     @Environment(PatternDocument.self) var doc
 
-    /// Stitch picked while symmetry isn't C1; asks before switching.
-    @State private var pendingStitch: Stitch?
-
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 4) {
@@ -20,36 +17,17 @@ struct StitchToolPicker: View {
                 ForEach(Stitch.allCases, id: \.self) { stitch in
                     toolButton(.stitch(stitch), help: stitch.displayName) {
                         StitchSymbolView(stitch: stitch)
-                            .opacity(doc.canPaint(stitch) ? 1 : 0.35)
                     }
                 }
             }
             .padding(.horizontal, 4)
-        }
-        .alert("Stitches need C1 symmetry for now",
-               isPresented: Binding(get: { pendingStitch != nil },
-                                    set: { if !$0 { pendingStitch = nil } }),
-               presenting: pendingStitch) { stitch in
-            Button("Switch to C1") {
-                doc.symmetryGroup = .c1
-                doc.paintTool = .stitch(stitch)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { _ in
-            Text("Switching keeps your colors. You can undo it.")
         }
     }
 
     private func toolButton<Label: View>(_ tool: PatternDocument.PaintTool, help: String,
                                          @ViewBuilder label: () -> Label) -> some View {
         let selected = doc.paintTool == tool
-        return Button {
-            if case .stitch(let stitch) = tool, !doc.canPaint(stitch) {
-                pendingStitch = stitch
-            } else {
-                doc.paintTool = tool
-            }
-        } label: {
+        return Button { doc.paintTool = tool } label: {
             label()
                 .frame(width: 26, height: 26)
                 .background(selected ? Color.accentColor.opacity(0.25) : .clear,

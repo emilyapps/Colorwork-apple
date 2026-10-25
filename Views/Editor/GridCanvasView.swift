@@ -55,6 +55,7 @@ struct GridCanvasView: View {
             .onAppear             { doc.canvasAvailableSize = geo.size; doc.fitCellSize() }
             .onChange(of: geo.size) { _, size in doc.canvasAvailableSize = size; doc.fitCellSize() }
         }
+        .overlay(alignment: .top) { SymmetryNoticeBanner() }
         .onChange(of: doc.H) { _, _ in doc.fitCellSize() }
         .onChange(of: doc.W) { _, _ in doc.fitCellSize() }
     }
@@ -116,7 +117,7 @@ struct GridCanvasView: View {
             doc.toggleCell(cell, region: region)
         case .stitch(let stitch):
             // Border strips are color-only
-            if region == .tile && doc.canPaint(stitch) { doc.paintStitch(stitch, at: cell) }
+            if region == .tile { doc.paintStitch(stitch, at: cell) }
         }
     }
 
@@ -155,5 +156,31 @@ struct GridCanvasView: View {
             return (CellIndex(row: row - H, col: col - W), .corner)
         }
         return nil
+    }
+}
+
+/// Explains why painting a stitch changed the Symmetry Group, then fades out.
+private struct SymmetryNoticeBanner: View {
+    @Environment(PatternDocument.self) var doc
+
+    var body: some View {
+        if let notice = doc.symmetryNotice {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "info.circle")
+                Text(notice)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { doc.symmetryNotice = nil } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
+            }
+            .padding(10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+            .padding(8)
+            .task(id: notice) {
+                try? await Task.sleep(for: .seconds(8))
+                doc.symmetryNotice = nil
+            }
+        }
     }
 }

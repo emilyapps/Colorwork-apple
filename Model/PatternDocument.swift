@@ -30,8 +30,7 @@ final class PatternDocument {
 
     var symmetryGroup: SymmetryGroup = .d4 {
         didSet {
-            pushUndo("Change Symmetry")
-            if case .stitch(let s) = paintTool, !canPaint(s) { paintTool = .color }
+            if !isDowngrading { pushUndo("Change Symmetry") }
             if symmetryGroup.requiresSquare {
                 isMutatingInternally = true
                 W = H
@@ -50,11 +49,23 @@ final class PatternDocument {
     }
     var paintTool: PaintTool = .color
 
-    /// Knit and purl look the same however they're mirrored or rotated, so any group allows them.
-    /// Other stitches are C1-only until Visual Equivalents land (issue #3).
-    func canPaint(_ stitch: Stitch) -> Bool {
-        stitch.looksTheSameUnderEveryTransformation || symmetryGroup == .c1
+    /// Groups whose every Transformation has a Visual Equivalent for every stitch in the Pattern.
+    var allowedSymmetryGroups: Set<SymmetryGroup> {
+        let used = Set(stitches.joined())
+        return Set(SymmetryGroup.allCases.filter { $0.allows(used) })
     }
+
+    /// Stitches in the Pattern that keep some groups from being offered, in catalog order.
+    var limitingStitches: [Stitch] {
+        let used = Set(stitches.joined())
+        return Stitch.allCases.filter { used.contains($0) && !SymmetryGroup.d4.allows([$0]) }
+    }
+
+    /// Set when painting a stitch downgraded the Symmetry Group; the editor shows it, then clears it.
+    var symmetryNotice: String?
+
+    /// The downgrade is undone with the paint stroke it belongs to, so it pushes no undo of its own.
+    private var isDowngrading = false
 
     private(set) var domainCells:    [CellIndex] = []
     private(set) var domainSet:      Set<CellIndex> = []
@@ -188,11 +199,24 @@ final class PatternDocument {
         isDirty = true
     }
 
-    /// Paints a Stitch into a tile Cell, and every symmetric copy of it, without touching color.
-    /// Border strips are color-only, so only the tile region takes stitches.
+    /// Paints a Stitch into a tile Cell without touching color. Linked cells get the stitch's
+    /// Visual Equivalent. If the current group doesn't allow the stitch, the group is downgraded
+    /// first, with a notice. Border strips are color-only, so only the tile region takes stitches.
     func paintStitch(_ stitch: Stitch, at cell: CellIndex) {
-        for member in symmetryGroup.orbit(cell.row, cell.col, H: H, W: W) {
-            stitches[member.row][member.col] = stitch
+        if !symmetryGroup.allows([stitch]) {
+            let old = symmetryGroup
+            isDowngrading = true
+            symmetryGroup = old.largestGroupAllowing(Set(stitches.joined()).union([stitch]))
+            isDowngrading = false
+            symmetryNotice = "Symmetry changed from \(old.displayName) to \(symmetryGroup.displayName): "
+                + "\(stitch.displayName) has no matching stitch under \(old.displayName)'s other "
+                + "rotations or reflections yet. Undo to go back."
+        }
+        // The painted cell is written last, so a cell on an axis keeps the stitch you chose.
+        let linked = symmetryGroup.linkedCells(cell.row, cell.col, H: H, W: W)
+        for (member, t) in linked.filter({ $0.transformation != .identity })
+                         + linked.filter({ $0.transformation == .identity }) {
+            if let s = stitch.visualEquivalent(under: t) { stitches[member.row][member.col] = s }
         }
         rebuildTileDescriptors()
         isDirty = true
@@ -363,6 +387,7 @@ struct PatternSnapshot: Codable {
     }
 
     func apply(to doc: PatternDocument) {
+        doc.symmetryNotice = nil
         doc.isMutatingInternally = true
         doc.H             = H
         doc.W             = W

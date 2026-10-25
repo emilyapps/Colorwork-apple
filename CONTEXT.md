@@ -86,7 +86,10 @@ _Avoid_: Horizontal reflection, vertical reflection, horizontal mirror, mirror p
 A 180° rotation. C2 is the Symmetry Group containing it.
 
 **Quarter-turn**:
-A 90° rotation. C4 is the Symmetry Group containing it.
+A 90° clockwise rotation. C4 is the Symmetry Group containing it, along with the half-turn and the **three-quarter-turn** (270°).
+
+**Reflection across a diagonal axis**:
+A Transformation whose mirror line runs corner to corner: the diagonal (top-left to bottom-right) or the anti-diagonal (top-right to bottom-left). Only D4 contains them; like turns, they need a square Pattern.
 
 **Translation**:
 Shifting a copy of a Pattern horizontally or vertically without turning or reflecting it; it has a direction, not an axis.

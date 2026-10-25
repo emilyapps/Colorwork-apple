@@ -1,5 +1,5 @@
 // SymmetryGroup.swift
-// Direct port of the six orbit functions from pattern_core.py lines 34–57.
+// Symmetry Groups as sets of Transformations; orbits originally ported from pattern_core.py lines 34–57.
 
 import Foundation
 
@@ -19,52 +19,79 @@ enum CellRegion: String, Codable {
     case corner
 }
 
+// MARK: - Transformation
+
+/// One of the 8 symmetries of a square grid. Reflections are named by their axis;
+/// turns are clockwise on screen. Turns and diagonal reflections need a square grid.
+enum Transformation: CaseIterable {
+    case identity
+    case verticalAxisReflection, horizontalAxisReflection
+    case diagonalAxisReflection, antiDiagonalAxisReflection
+    case quarterTurn, halfTurn, threeQuarterTurn
+
+    func apply(_ r: Int, _ c: Int, H: Int, W: Int) -> CellIndex {
+        let N = H
+        switch self {
+        case .identity:                   return CellIndex(row: r,       col: c)
+        case .verticalAxisReflection:     return CellIndex(row: r,       col: W - 1 - c)
+        case .horizontalAxisReflection:   return CellIndex(row: H - 1 - r, col: c)
+        case .halfTurn:                   return CellIndex(row: H - 1 - r, col: W - 1 - c)
+        case .quarterTurn:                return CellIndex(row: c,       col: N - 1 - r)
+        case .threeQuarterTurn:           return CellIndex(row: N - 1 - c, col: r)
+        case .diagonalAxisReflection:     return CellIndex(row: c,       col: r)
+        case .antiDiagonalAxisReflection: return CellIndex(row: N - 1 - c, col: N - 1 - r)
+        }
+    }
+}
+
 // MARK: - SymmetryGroup
 
 enum SymmetryGroup: String, CaseIterable, Codable {
     case c1, d1, d1h, c2, d2, c4, d4
 
-    // MARK: Orbit — returns all cells equivalent to (r,c) under this group
-    func orbit(_ r: Int, _ c: Int, H: Int, W: Int) -> Set<CellIndex> {
-        let N = H
+    // MARK: Transformations and linked cells
+
+    /// The Transformations that make up this group.
+    var transformations: [Transformation] {
         switch self {
-        case .c1:
-            return [CellIndex(row: r, col: c)]
-
-        case .d1:
-            return [CellIndex(row: r, col: c),
-                    CellIndex(row: r, col: W - 1 - c)]
-
-        case .d1h:
-            return [CellIndex(row: r,     col: c),
-                    CellIndex(row: H-1-r, col: c)]
-
-        case .c2:
-            return [CellIndex(row: r,     col: c),
-                    CellIndex(row: H-1-r, col: W-1-c)]
-
-        case .d2:
-            return [CellIndex(row: r,     col: c),
-                    CellIndex(row: H-1-r, col: W-1-c),
-                    CellIndex(row: r,     col: W-1-c),
-                    CellIndex(row: H-1-r, col: c)]
-
-        case .c4:
-            return [CellIndex(row: r,     col: c),
-                    CellIndex(row: c,     col: N-1-r),
-                    CellIndex(row: N-1-r, col: N-1-c),
-                    CellIndex(row: N-1-c, col: r)]
-
-        case .d4:
-            return [CellIndex(row: r,     col: c),
-                    CellIndex(row: c,     col: N-1-r),
-                    CellIndex(row: N-1-r, col: N-1-c),
-                    CellIndex(row: N-1-c, col: r),
-                    CellIndex(row: r,     col: N-1-c),
-                    CellIndex(row: N-1-r, col: c),
-                    CellIndex(row: c,     col: r),
-                    CellIndex(row: N-1-c, col: N-1-r)]
+        case .c1:  return [.identity]
+        case .d1:  return [.identity, .verticalAxisReflection]
+        case .d1h: return [.identity, .horizontalAxisReflection]
+        case .c2:  return [.identity, .halfTurn]
+        case .d2:  return [.identity, .halfTurn, .verticalAxisReflection, .horizontalAxisReflection]
+        case .c4:  return [.identity, .quarterTurn, .halfTurn, .threeQuarterTurn]
+        case .d4:  return [.identity, .quarterTurn, .halfTurn, .threeQuarterTurn,
+                           .verticalAxisReflection, .horizontalAxisReflection,
+                           .diagonalAxisReflection, .antiDiagonalAxisReflection]
         }
+    }
+
+    /// Every cell linked to (r,c), each with the Transformation that produced it.
+    /// A cell on an axis appears more than once, under different Transformations.
+    func linkedCells(_ r: Int, _ c: Int, H: Int, W: Int) -> [(cell: CellIndex, transformation: Transformation)] {
+        transformations.map { ($0.apply(r, c, H: H, W: W), $0) }
+    }
+
+    /// All cells equivalent to (r,c) under this group.
+    func orbit(_ r: Int, _ c: Int, H: Int, W: Int) -> Set<CellIndex> {
+        Set(linkedCells(r, c, H: H, W: W).map(\.cell))
+    }
+
+    // MARK: Stitches (ADR 0001)
+
+    /// True when every stitch has a Visual Equivalent under every Transformation in this group.
+    func allows(_ stitches: some Sequence<Stitch>) -> Bool {
+        let ts = transformations
+        return Set(stitches).allSatisfy { s in ts.allSatisfy { s.visualEquivalent(under: $0) != nil } }
+    }
+
+    /// The largest group within this one that allows the stitches (C1 always does).
+    func largestGroupAllowing(_ stitches: some Sequence<Stitch>) -> SymmetryGroup {
+        let mine = Set(transformations)
+        let distinct = Set(stitches)
+        return SymmetryGroup.allCases
+            .filter { Set($0.transformations).isSubset(of: mine) && $0.allows(distinct) }
+            .max { $0.transformations.count < $1.transformations.count } ?? .c1
     }
 
     // MARK: UI helpers
