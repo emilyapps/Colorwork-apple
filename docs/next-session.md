@@ -13,6 +13,22 @@ _Last updated 2026-10-24._
 1. **List reordering on macOS.** Reordering Patterns and Projects works and persists on iOS, but not on the Mac.
 2. **iPhone editor toolbar.** The tools moved to a row below the canvas (commit 30096c9). The redesign you'd mentioned is still parked.
 
+## Your ideas for next time
+
+1. **Make the app agentic: build a chart from a photo.** Reading the yoke from your photo worked well, so do it in the app. This session's steps were:
+   - find the corners of one repeat
+   - correct for tilt and perspective
+   - read each cell's color
+   - spot the increase and decrease symbols
+   - choose the orientation (as printed, or recharted bottom-up)
+   - check the derived gaps against the printed gray cells
+
+   Things to decide:
+   - Use the Claude API with image input (best at reading symbols and layout, needs a network connection and an API key), or do it on-device with Apple's Vision framework for the grid plus color sampling, or combine the two.
+   - How the user confirms or fixes the result before it becomes a Pattern.
+   - Whether the app can go further, e.g. "rechart this bottom-up with decreases".
+2. **Play with the stitch picker** to find UI and functionality improvements, then bring back the list.
+
 ## Things to look into (noticed along the way)
 
 - **Gap placement felt "weird"** in some of your charts. The rules are in `CONTEXT.md` under "Relationships" and "Flagged ambiguities". The likeliest suspects:
