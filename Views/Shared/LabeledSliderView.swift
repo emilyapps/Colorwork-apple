@@ -30,7 +30,11 @@ struct LabeledSliderView: View {
                 .font(.system(size: 11, design: .monospaced))
                 .frame(width: 42)
                 #if os(iOS)
-                .keyboardType(.decimalPad)
+                // The number pad has no Return key, so use the numbers keyboard, whose
+                // Return key reads "done" and commits the value.
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
+                .autocorrectionDisabled()
                 #endif
                 .multilineTextAlignment(.trailing)
                 .focused($focused)
