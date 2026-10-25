@@ -8,18 +8,7 @@ import Foundation
 enum SVGExporter {
 
     static func export(doc: PatternDocument) throws -> Data {
-        let tileSize = DescriptorBuilder.tileCanvasSize(
-            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
-
-        let tileDescs = DescriptorBuilder.tileDescriptors(
-            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
-            domainCells: doc.domainSet, showDomain: false,
-            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+        let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let w = tileSize.width
         let h = tileSize.height
@@ -52,7 +41,7 @@ enum SVGExporter {
                     .replacingOccurrences(of: "&", with: "&amp;")
                     .replacingOccurrences(of: "<", with: "&lt;")
                     .replacingOccurrences(of: ">", with: "&gt;")
-                lines.append("  <text x=\"\(f(t.x))\" y=\"\(f(t.y))\" font-size=\"\(f(t.fontSize))\" font-family=\"Helvetica, sans-serif\" fill=\"\(t.fill)\" text-anchor=\"middle\" dominant-baseline=\"middle\">\(escaped)</text>")
+                lines.append("  <text x=\"\(f(t.x))\" y=\"\(f(t.y))\" font-size=\"\(f(t.fontSize))\" font-family=\"Helvetica, sans-serif\" fill=\"\(t.fill)\" text-anchor=\"\(t.leading ? "start" : "middle")\" dominant-baseline=\"middle\">\(escaped)</text>")
             }
         }
 

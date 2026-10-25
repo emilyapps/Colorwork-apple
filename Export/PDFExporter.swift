@@ -36,18 +36,7 @@ enum Exporter {
 enum PDFExporter {
 
     static func export(doc: PatternDocument, includeTiling: Bool = true) throws -> Data {
-        let tileSize = DescriptorBuilder.tileCanvasSize(
-            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
-
-        let tileDescs = DescriptorBuilder.tileDescriptors(
-            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
-            domainCells: doc.domainSet, showDomain: false,
-            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+        let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let data = NSMutableData()
         guard let consumer = CGDataConsumer(data: data as CFMutableData) else {
@@ -96,18 +85,7 @@ enum PNGExporter {
 
     /// Renders the tile as a PNG at the given pixel scale (default 2×).
     static func export(doc: PatternDocument, scale: CGFloat = 2) throws -> Data {
-        let tileSize = DescriptorBuilder.tileCanvasSize(
-            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
-
-        let tileDescs = DescriptorBuilder.tileDescriptors(
-            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
-            domainCells: doc.domainSet, showDomain: false,
-            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+        let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let pixelW = Int(tileSize.width  * scale)
         let pixelH = Int(tileSize.height * scale)
@@ -146,6 +124,27 @@ enum PNGExporter {
     }
 }
 
+// MARK: - Shared tile layout
+
+/// The tile page shared by every export: the canvas's descriptors, stitches and legend
+/// included, without the domain highlight.
+enum ExportTile {
+    static func make(_ doc: PatternDocument) -> (size: CGSize, descriptors: [RenderDescriptor]) {
+        let size = DescriptorBuilder.tileCanvasSize(
+            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
+            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
+            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches)
+        let descriptors = DescriptorBuilder.tileDescriptors(
+            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
+            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
+            domainCells: doc.domainSet, showDomain: false,
+            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
+            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
+            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches)
+        return (size, descriptors)
+    }
+}
+
 // MARK: - Shared CoreGraphics helpers
 
 private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGContext) {
@@ -164,7 +163,7 @@ private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGCo
             }
         case .text(let t):
             drawText(t.text, at: CGPoint(x: t.x, y: t.y),
-                     fontSize: t.fontSize, hexColor: t.fill, ctx: ctx)
+                     fontSize: t.fontSize, hexColor: t.fill, leading: t.leading, ctx: ctx)
         case .line(let l):
             if let stroke = cgColor(l.fill) {
                 ctx.setStrokeColor(stroke)
@@ -198,7 +197,7 @@ private func cgColor(_ hex: String) -> CGColor? {
 }
 
 private func drawText(_ text: String, at point: CGPoint,
-                       fontSize: CGFloat, hexColor: String, ctx: CGContext) {
+                       fontSize: CGFloat, hexColor: String, leading: Bool = false, ctx: CGContext) {
     guard let color = cgColor(hexColor) else { return }
     let font = CTFontCreateWithName("Helvetica" as CFString, fontSize, nil)
     let attrs: [CFString: Any] = [
@@ -216,7 +215,7 @@ private func drawText(_ text: String, at point: CGPoint,
     ctx.translateBy(x: point.x, y: point.y)
     ctx.scaleBy(x: 1, y: -1)
     ctx.textMatrix = .identity
-    let cx = bounds.origin.x + bounds.width  / 2
+    let cx = leading ? bounds.origin.x : bounds.origin.x + bounds.width / 2
     let cy = bounds.origin.y + bounds.height / 2
     ctx.textPosition = CGPoint(x: -cx, y: -cy)
     CTLineDraw(line, ctx)

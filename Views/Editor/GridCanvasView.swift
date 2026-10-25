@@ -79,7 +79,7 @@ struct GridCanvasView: View {
                         .font(.system(size: t.fontSize))
                         .foregroundColor(ColorMath.color(from: t.fill)),
                     at: CGPoint(x: t.x, y: t.y),
-                    anchor: .center)
+                    anchor: t.leading ? .leading : .center)
             case .line(let l):
                 var path = Path()
                 path.move(to: CGPoint(x: l.x1, y: l.y1))

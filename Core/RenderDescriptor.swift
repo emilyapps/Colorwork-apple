@@ -12,6 +12,12 @@ enum Layout {
     static let numH:    CGFloat = 16   // extra bottom margin for col numbers
     static let stripBG   = "#e8e8e8"
     static let stripLine = "#aaaaaa"
+
+    // Legend below the column numbers (fixed size, independent of cell size)
+    static let legendGap:    CGFloat = 10
+    static let legendRow:    CGFloat = 20
+    static let legendBox:    CGFloat = 16
+    static let legendColumn: CGFloat = 180
 }
 
 // MARK: - RenderDescriptor
@@ -30,6 +36,7 @@ enum RenderDescriptor {
         let text: String
         let fontSize: CGFloat
         let fill: String
+        var leading = false     // x is the left edge instead of the center
     }
     struct LineInfo {
         let x1, y1, x2, y2: CGFloat
@@ -72,12 +79,51 @@ enum DescriptorBuilder {
     }
 
     // MARK: tile_canvas_size — port of pattern_core.py:tile_canvas_size
-    static func tileCanvasSize(H: Int, W: Int, cellSize: CGFloat, hOn: Bool, vOn: Bool, stripWidth: Int) -> CGSize {
+    static func tileCanvasSize(H: Int, W: Int, cellSize: CGFloat, hOn: Bool, vOn: Bool, stripWidth: Int,
+                               stitches: [[Stitch]] = []) -> CGSize {
         let exC = hOn ? CGFloat(stripWidth) : 0
         let exR = vOn ? CGFloat(stripWidth) : 0
         let width  = (CGFloat(W) + exC) * cellSize + 2 * Layout.padding + Layout.numW
         let height = (CGFloat(H) + exR) * cellSize + 2 * Layout.padding + Layout.numH
-        return CGSize(width: width, height: height)
+        return CGSize(width: width,
+                      height: height + legendHeight(legendStitches(stitches), width: width))
+    }
+
+    // MARK: Legend
+
+    /// The stitches a chart's legend lists, in catalog order: none for an all-knit Pattern,
+    /// otherwise every stitch used, knit included.
+    static func legendStitches(_ stitches: [[Stitch]]) -> [Stitch] {
+        let used = Set(stitches.joined())
+        guard used.contains(where: { $0 != .knit }) else { return [] }
+        return Stitch.allCases.filter(used.contains)
+    }
+
+    private static func legendColumns(width: CGFloat) -> Int {
+        max(1, Int((width - 2 * Layout.padding) / Layout.legendColumn))
+    }
+
+    static func legendHeight(_ legend: [Stitch], width: CGFloat) -> CGFloat {
+        guard !legend.isEmpty else { return 0 }
+        let rows = (legend.count + legendColumns(width: width) - 1) / legendColumns(width: width)
+        return Layout.legendGap + CGFloat(rows) * Layout.legendRow
+    }
+
+    /// One symbol box and name per stitch, in columns, starting at y0.
+    static func legendDescriptors(_ legend: [Stitch], y0: CGFloat, width: CGFloat) -> [RenderDescriptor] {
+        let columns = legendColumns(width: width)
+        let box = Layout.legendBox
+        var out = [RenderDescriptor]()
+        for (i, stitch) in legend.enumerated() {
+            let x = Layout.padding + CGFloat(i % columns) * Layout.legendColumn
+            let y = y0 + Layout.legendGap + CGFloat(i / columns) * Layout.legendRow
+            out.append(.rect(.init(x: x, y: y, w: box, h: box, fill: "#ffffff",
+                                   outline: "#999999", outlineWidth: 1, cell: nil, region: nil)))
+            out += symbolDescriptors(stitch, x0: x, y0: y, cellSize: box, ink: "#000000")
+            out.append(.text(.init(x: x + box + 6, y: y + box / 2, text: stitch.displayName,
+                                   fontSize: 11, fill: "#333333", leading: true)))
+        }
+        return out
     }
 
     // MARK: get_tile_descriptors — port of pattern_core.py:get_tile_descriptors
@@ -196,6 +242,12 @@ enum DescriptorBuilder {
                     text: "\(exR - sr)", fontSize: numFS, fill: "#777777")))
             }
         }
+
+        // Legend
+        let width = CGFloat(totalCols) * cs + 2 * Layout.padding + Layout.numW
+        out += legendDescriptors(legendStitches(stitches),
+                                 y0: Layout.padding + CGFloat(totalRows) * cs + Layout.numH,
+                                 width: width)
 
         return out
     }

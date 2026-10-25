@@ -134,7 +134,9 @@ final class PatternDocument {
     func fitCellSize() {
         guard canvasAvailableSize.width > 0, canvasAvailableSize.height > 0 else { return }
         let fitW = (canvasAvailableSize.width  - 2 * Layout.padding - Layout.numW) / CGFloat(W)
-        let fitH = (canvasAvailableSize.height - 2 * Layout.padding - Layout.numH) / CGFloat(H)
+        let legend = DescriptorBuilder.legendHeight(DescriptorBuilder.legendStitches(stitches),
+                                                    width: canvasAvailableSize.width)
+        let fitH = (canvasAvailableSize.height - 2 * Layout.padding - Layout.numH - legend) / CGFloat(H)
         let newSize = max(8, min(60, floor(min(fitW, fitH))))
         cellSize = Double(newSize)
         rebuildDescriptors()
@@ -307,7 +309,7 @@ final class PatternDocument {
         tileCanvasSize = DescriptorBuilder.tileCanvasSize(
             H: H, W: W, cellSize: cs,
             hOn: tiling.hRepeat, vOn: tiling.vRepeat,
-            stripWidth: tiling.stripWidth)
+            stripWidth: tiling.stripWidth, stitches: stitches)
         tileDescriptors = DescriptorBuilder.tileDescriptors(
             grid: grid, H: H, W: W, cellSize: cs,
             fillColor: fillColor.hex, bgColor: bgColor.hex,
