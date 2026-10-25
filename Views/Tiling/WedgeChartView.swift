@@ -69,7 +69,12 @@ struct CircularView: View {
                 outlineWidth = p.outlineWidth
             }
         }
-        for (hex, path) in fills { ctx.fill(path, with: .color(ColorMath.color(from: hex))) }
+        // Stroking each color in itself seals hairline seams between neighbouring segments.
+        for (hex, path) in fills {
+            let color = ColorMath.color(from: hex)
+            ctx.fill(path, with: .color(color))
+            ctx.stroke(path, with: .color(color), lineWidth: 0.6)
+        }
         if let outlineColor {
             ctx.stroke(outlines, with: .color(ColorMath.color(from: outlineColor)), lineWidth: outlineWidth)
         }
