@@ -85,14 +85,15 @@ struct TilingSheetView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 Group {
-                    if doc.kind == .wedge { WedgeChartView() } else { TilingPreviewView() }
+                    if doc.kind == .wedge { WedgePreviewView() } else { TilingPreviewView() }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 Divider()
                 TilingSettingsView()
                     .frame(maxWidth: .infinity, maxHeight: doc.kind == .wedge ? 120 : 300)
             }
-            .navigationTitle(doc.kind == .wedge ? "Chart View" : "Tiling")
+            .navigationTitle(doc.kind == .tile ? "Tiling"
+                             : doc.wedgeView == .chart ? "Chart View" : "Circular View")
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif

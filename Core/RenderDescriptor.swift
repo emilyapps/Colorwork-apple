@@ -52,10 +52,18 @@ enum RenderDescriptor {
         let width: CGFloat      // stroke width when not filled
     }
 
+    struct PolygonInfo {
+        let points: [CGPoint]
+        let fill: String
+        let outline: String?
+        let outlineWidth: CGFloat
+    }
+
     case rect(RectInfo)
     case text(TextInfo)
     case line(LineInfo)
     case circle(CircleInfo)
+    case polygon(PolygonInfo)
 }
 
 // MARK: - DescriptorBuilder

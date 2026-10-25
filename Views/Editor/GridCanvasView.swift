@@ -186,6 +186,14 @@ func drawDescriptors(_ descriptors: [RenderDescriptor], in ctx: GraphicsContext)
             let color = ColorMath.color(from: c.fill)
             if c.filled { ctx.fill(path, with: .color(color)) }
             else        { ctx.stroke(path, with: .color(color), lineWidth: c.width) }
+        case .polygon(let p):
+            var path = Path()
+            path.addLines(p.points)
+            path.closeSubpath()
+            ctx.fill(path, with: .color(ColorMath.color(from: p.fill)))
+            if let outline = p.outline {
+                ctx.stroke(path, with: .color(ColorMath.color(from: outline)), lineWidth: p.outlineWidth)
+            }
         }
     }
 }

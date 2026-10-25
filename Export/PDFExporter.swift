@@ -207,6 +207,18 @@ private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGCo
                     ctx.strokeEllipse(in: rect)
                 }
             }
+        case .polygon(let p):
+            guard let fill = cgColor(p.fill) else { break }
+            ctx.addLines(between: p.points)
+            ctx.closePath()
+            ctx.setFillColor(fill)
+            if let outline = p.outline.flatMap(cgColor) {
+                ctx.setStrokeColor(outline)
+                ctx.setLineWidth(p.outlineWidth)
+                ctx.drawPath(using: .fillStroke)
+            } else {
+                ctx.fillPath()
+            }
         }
     }
 }

@@ -13,6 +13,11 @@ enum PatternKind: String, Codable, CaseIterable {
     case tile, wedge
 }
 
+/// How a Wedge is previewed: N repeats side by side, or rings seen from above.
+enum WedgeView: String, Codable {
+    case chart, circular
+}
+
 @Observable
 final class PatternDocument {
 
@@ -55,6 +60,10 @@ final class PatternDocument {
 
     /// Radial Repeat count N for a Wedge; stored in Projects, not Patterns.
     var radialRepeat: Int = 8
+
+    /// Wedge preview settings; view settings, so stored in Projects and untouched by undo.
+    var wedgeView: WedgeView = .chart
+    var circularFlipped = false
 
     /// A Wedge allows only C1 or D1V, even without Shaping.
     static let wedgeSymmetryGroups: Set<SymmetryGroup> = [.c1, .d1]
@@ -156,7 +165,7 @@ final class PatternDocument {
         let snapshot = PatternSnapshot(from: self)
         undoManager?.registerUndo(withTarget: self) { doc in
             doc.pushUndo(name)
-            snapshot.apply(to: doc, restoringRadialRepeat: false)
+            snapshot.apply(to: doc, restoringViewSettings: false)
             doc.canUndo = doc.undoManager?.canUndo ?? false
             doc.canRedo = doc.undoManager?.canRedo ?? false
         }
@@ -474,6 +483,8 @@ struct PatternSnapshot: Codable {
     var tiling:         TilingSettings
     var kind:           PatternKind?  // nil in snapshots saved before Wedges existed (a Tile)
     var radialRepeat:   Int?
+    var wedgeView:      WedgeView?
+    var circularFlipped: Bool?
 
     init(from doc: PatternDocument) {
         H             = doc.H
@@ -492,13 +503,20 @@ struct PatternSnapshot: Codable {
         tiling        = doc.tiling
         kind          = doc.kind
         radialRepeat  = doc.radialRepeat
+        wedgeView     = doc.wedgeView
+        circularFlipped = doc.circularFlipped
     }
 
-    /// Undo restores the chart but not N, which is a Project setting rather than an edit.
-    func apply(to doc: PatternDocument, restoringRadialRepeat: Bool = true) {
+    /// Undo restores the chart but not N or the Wedge preview settings, which are Project
+    /// settings rather than edits.
+    func apply(to doc: PatternDocument, restoringViewSettings: Bool = true) {
         doc.symmetryNotice = nil
         doc.kind          = kind ?? .tile
-        if restoringRadialRepeat, let radialRepeat { doc.radialRepeat = radialRepeat }
+        if restoringViewSettings {
+            if let radialRepeat { doc.radialRepeat = radialRepeat }
+            if let wedgeView { doc.wedgeView = wedgeView }
+            if let circularFlipped { doc.circularFlipped = circularFlipped }
+        }
         doc.isMutatingInternally = true
         doc.H             = H
         doc.W             = W

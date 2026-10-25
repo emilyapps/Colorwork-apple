@@ -44,10 +44,11 @@ struct PatternEditorView: View {
                 .frame(minWidth: 300, idealWidth: .infinity)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(doc.kind == .wedge ? "Chart View" : "Tiling Preview")
+                    Text(doc.kind == .tile ? "Tiling Preview"
+                         : doc.wedgeView == .chart ? "Chart View" : "Circular View")
                         .font(.system(size: 13, weight: .semibold))
                         .padding([.top, .leading], 8)
-                    if doc.kind == .wedge { WedgeChartView() } else { TilingPreviewView() }
+                    if doc.kind == .wedge { WedgePreviewView() } else { TilingPreviewView() }
                 }
                 .frame(minWidth: 300, idealWidth: .infinity)
             }

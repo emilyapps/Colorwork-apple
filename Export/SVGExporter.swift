@@ -36,6 +36,11 @@ enum SVGExporter {
                     : "fill=\"none\" stroke=\"\(c.fill)\" stroke-width=\"\(f(c.width))\""
                 lines.append("  <circle cx=\"\(f(c.cx))\" cy=\"\(f(c.cy))\" r=\"\(f(c.r))\" \(paint)/>")
 
+            case .polygon(let p):
+                let points = p.points.map { "\(f($0.x)),\(f($0.y))" }.joined(separator: " ")
+                let stroke = p.outline.map { "stroke=\"\($0)\" stroke-width=\"\(f(p.outlineWidth))\"" } ?? "stroke=\"none\""
+                lines.append("  <polygon points=\"\(points)\" fill=\"\(p.fill)\" \(stroke)/>")
+
             case .text(let t):
                 let escaped = t.text
                     .replacingOccurrences(of: "&", with: "&amp;")
