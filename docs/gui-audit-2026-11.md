@@ -28,5 +28,5 @@ Build order: 1 → 2 → 3 → 4, each checked in the Simulator.
 
 5. Settings sheet (done 2026-11-07): title and Done; shorthand "D4", "N", "ρ" kept by choice; slider rows even (body text, full-width slider, aligned tracks, boxed value). Still open: at accessibility text sizes put labels above their controls (e.g. "Rota-tion" wraps beside its picker).
 6–7. Tiling sheet (done 2026-11-07): preview fixed at ~40% of the sheet and centred, settings get the rest; Copies, Border Strip and Brick Offset dimmed (faded) with no repeat, strip reflect toggles also dimmed at width 0; brick offset capped at chart width/height − 1. Preview with no repeat left as is (Emily's choice).
-8. Colors sheet: hex shown twice, no selected-swatch mark; palette not grouped by hue.
+8. Colors sheet (done 2026-11-07, iPhone): Fill and Background shown as two swatches side by side with editable hex; matplotlib palette kept (Emily likes it), in its original order with the current colour ringed and named (hue grouping tried and reverted); CMYK tab replaced by Apple's colour picker ("Custom"); Compare labelled ("Blend from fill to background", "Suggested backgrounds"); preview centred. The Mac sidebar still has CMYK.
 9. Parked: Wedge stitch totals on the iPhone canvas; macOS list reordering. The Mac app has not been audited.

@@ -16,54 +16,33 @@ struct ColorPickerSheetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // Fill / Background picker
-            Picker("Color", selection: $activeTarget) {
-                Text("Fill").tag(ColorTarget.fill)
-                Text("Background").tag(ColorTarget.bg)
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal)
-
-            // Swatch + hex
+            // Fill and Background side by side, like Keynote's fill/stroke wells:
+            // tap one to edit it; its hex can be typed directly.
             HStack(spacing: 12) {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(ColorMath.color(from: activeColor.hex))
-                    .frame(width: 44, height: 44)
-                    .overlay(RoundedRectangle(cornerRadius: 8)
-                        .stroke(.secondary.opacity(0.3), lineWidth: 1))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(activeColor.hex.uppercased())
-                        .font(.footnote.monospaced())
-                    hexField
-                }
-                Spacer()
+                colorWell(.fill, label: "Fill")
+                colorWell(.bg, label: "Background")
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
 
             Divider()
 
-            // Tab picker
-            Picker("", selection: $selectedTab) {
+            Picker("Choose from", selection: $selectedTab) {
                 Text("Palette").tag(0)
-                Text("CMYK").tag(1)
+                Text("Custom").tag(1)
                 Text("Compare").tag(2)
             }
             .pickerStyle(.segmented)
             .padding(.horizontal)
             .padding(.vertical, 8)
 
-            // Content
             Group {
                 switch selectedTab {
                 case 1:
-                    ScrollView {
-                        CMYKSlidersView(colorState: activeColor, label: "CMYK")
-                            .padding(.horizontal)
-                    }
+                    customPicker
                 case 2:
                     ScrollView {
-                        ColorCompareView()
+                        ColorCompareView(editingFill: activeTarget == .fill)
                             .padding(.horizontal)
                     }
                 default:
@@ -94,18 +73,71 @@ struct ColorPickerSheetView: View {
         activeTarget == .fill ? doc.fillColor : doc.bgColor
     }
 
-    private var hexField: some View {
-        HStack(spacing: 4) {
+    private func state(_ t: ColorTarget) -> ColorState { t == .fill ? doc.fillColor : doc.bgColor }
+
+    private func colorWell(_ t: ColorTarget, label: String) -> some View {
+        let isActive = activeTarget == t
+        return VStack(alignment: .leading, spacing: 6) {
+            Button { activeTarget = t } label: {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(ColorMath.color(from: state(t).hex))
+                    .frame(height: 44)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.secondary.opacity(0.3), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 10)
+                        .stroke(Color.accentColor, lineWidth: isActive ? 3 : 0)
+                        .padding(-3))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(label) color")
+            .accessibilityAddTraits(isActive ? .isSelected : [])
+            HStack(spacing: 4) {
+                Text(label).font(.subheadline.weight(isActive ? .semibold : .regular))
+                Spacer(minLength: 4)
+                hexField(t)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func hexField(_ t: ColorTarget) -> some View {
+        HStack(spacing: 1) {
             Text("#").foregroundStyle(.secondary)
             TextField("rrggbb", text: Binding(
-                get: { String(activeColor.hex.dropFirst()) },
+                get: { String(state(t).hex.dropFirst()).uppercased() },
                 set: { v in
                     let candidate = "#" + v.trimmingCharacters(in: .whitespaces).lowercased()
-                    if candidate.count == 7 { activeColor.setHex(candidate); doc.rebuildDescriptors() }
+                    if candidate.count == 7, ColorMath.hexToRGB(candidate) != nil {
+                        state(t).setHex(candidate); doc.rebuildDescriptors()
+                    }
                 }))
-            .font(.footnote.monospaced())
-            .frame(width: 80)
+            #if os(iOS)
+            .textInputAutocapitalization(.characters)
+            #endif
+            .autocorrectionDisabled()
+            .frame(width: 66)
+            .onTapGesture { activeTarget = t }
         }
+        .font(.footnote.monospaced())
+    }
+
+    /// Apple's color picker (grid, spectrum, sliders, eyedropper, saved colors).
+    private var customPicker: some View {
+        VStack(spacing: 12) {
+            ColorPicker(selection: Binding(
+                get: { ColorMath.color(from: activeColor.hex) },
+                set: { c in
+                    activeColor.setHex(ColorMath.hex(from: c)); doc.rebuildDescriptors()
+                }), supportsOpacity: false) {
+                Text("Choose a custom \(activeTarget == .fill ? "fill" : "background") color")
+            }
+            Text("Grid, spectrum and sliders, plus an eyedropper for matching a yarn photo.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Spacer()
+        }
+        .padding(.horizontal)
+        .padding(.top, 8)
     }
 }
 

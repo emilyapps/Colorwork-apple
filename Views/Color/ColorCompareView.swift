@@ -6,19 +6,20 @@ import SwiftUI
 
 struct ColorCompareView: View {
     @Environment(PatternDocument.self) var doc
+    /// Which color is being edited; suggestions are for the *other* one.
+    var editingFill: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Compare").font(.headline)
-
             // Gradient fill → bg
+            Text("Blend from fill to background").font(.subheadline).foregroundStyle(.secondary)
             gradientStrip
 
             // Contrast ratio
             let ratio = ColorMath.contrastRatio(doc.fillColor.hex, doc.bgColor.hex)
             HStack {
                 Text(String(format: "Contrast: %.1f:1", ratio))
-                    .font(.caption)
+                    .font(.subheadline)
                 Spacer()
                 Text(wcagLabel(ratio))
                     .font(.caption2.weight(.semibold))
@@ -28,15 +29,24 @@ struct ColorCompareView: View {
             }
 
             // Harmony swatches (applied to bg color)
-            Text("Harmonies (→ bg)").font(.subheadline).foregroundStyle(.secondary)
-            let harmonies = ColorMath.harmonyColors(fill: doc.fillColor.hex)
+            // Editing the fill → suggest backgrounds to go with it, and vice versa.
+            Text(editingFill ? "Backgrounds to go with this fill — tap to use"
+                             : "Fills to go with this background — tap to use")
+                .font(.subheadline).foregroundStyle(.secondary)
+                .padding(.top, 6)
+            let harmonies = ColorMath.harmonyColors(fill: editingFill ? doc.fillColor.hex : doc.bgColor.hex)
             LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 7), spacing: 4) {
                 ForEach(Array(harmonies.enumerated()), id: \.offset) { _, hex in
                     RoundedRectangle(cornerRadius: 4)
                         .fill(ColorMath.color(from: hex))
                         .frame(height: 24)
                         .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.3), lineWidth: 0.5))
-                        .onTapGesture { doc.bgColor.setHex(hex); doc.rebuildDescriptors() }
+                        .onTapGesture {
+                            (editingFill ? doc.bgColor : doc.fillColor).setHex(hex)
+                            doc.rebuildDescriptors()
+                        }
+                        .accessibilityLabel(editingFill ? "Use as background" : "Use as fill")
+                        .accessibilityAddTraits(.isButton)
                 }
             }
         }

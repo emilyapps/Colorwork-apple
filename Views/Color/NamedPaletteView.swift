@@ -1,6 +1,6 @@
 // NamedPaletteView.swift
-// LazyVGrid of CSS4 named color swatches.
-// Tapping a swatch sets it as fill or bg color.
+// The matplotlib / CSS4 named colors in their original order. The current color is
+// ringed and its name shown above the grid. Tapping a swatch sets the fill or bg color.
 
 import SwiftUI
 
@@ -16,38 +16,57 @@ struct NamedPaletteView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Palette (\(target == .fill ? "Fill" : "Background"))")
-                .font(.headline)
-            // Fixed-height label so the grid doesn't shift on hover
-            Text(hoveredHex ?? " ")
-                .font(.caption2.monospaced())
+            // Name of the current (or, on the Mac, hovered) color; fixed height so nothing shifts.
+            Text(caption)
+                .font(.caption.monospaced())
                 .foregroundStyle(.secondary)
-                .frame(height: 14, alignment: .leading)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 3) {
-                    ForEach(CSS4Colors.sorted, id: \.hex) { entry in
-                        swatchCell(name: entry.name, hex: entry.hex)
-                    }
+                    ForEach(CSS4Colors.sorted, id: \.hex) { swatchCell($0) }
                 }
+                .padding(.vertical, 2)
             }
         }
     }
 
-    private func swatchCell(name: String, hex: String) -> some View {
-        RoundedRectangle(cornerRadius: 3)
-            .fill(ColorMath.color(from: hex))
-            .frame(height: 18)
+    private var currentHex: String {
+        (target == .fill ? doc.fillColor.hex : doc.bgColor.hex).lowercased()
+    }
+
+    private var caption: String {
+        if let h = hoveredHex { return h }
+        let hex = currentHex
+        if let entry = CSS4Colors.sorted.first(where: { $0.hex.lowercased() == hex }) {
+            return "\(entry.name)  \(hex.uppercased())"
+        }
+        return "Custom  \(hex.uppercased())"
+    }
+
+    private func swatchCell(_ entry: CSS4ColorEntry) -> some View {
+        let selected = entry.hex.lowercased() == currentHex
+        return RoundedRectangle(cornerRadius: 3)
+            .fill(ColorMath.color(from: entry.hex))
+            .frame(height: 22)
             .overlay(RoundedRectangle(cornerRadius: 3).stroke(.secondary.opacity(0.2), lineWidth: 0.5))
+            .overlay(RoundedRectangle(cornerRadius: 4)
+                .stroke(Color.accentColor, lineWidth: selected ? 2.5 : 0)
+                .padding(-2))
+            .contentShape(Rectangle())
             .onTapGesture {
                 switch target {
-                case .fill: doc.fillColor.setHex(hex)
-                case .bg:   doc.bgColor.setHex(hex)
+                case .fill: doc.fillColor.setHex(entry.hex)
+                case .bg:   doc.bgColor.setHex(entry.hex)
                 }
                 doc.rebuildDescriptors()
             }
             #if os(macOS)
-            .onHover { inside in hoveredHex = inside ? "\(name)  \(hex)" : nil }
+            .onHover { inside in hoveredHex = inside ? "\(entry.name)  \(entry.hex.uppercased())" : nil }
             #endif
-            .help(name)
+            .help(entry.name)
+            .accessibilityElement()
+            .accessibilityLabel(entry.name)
+            .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 }
