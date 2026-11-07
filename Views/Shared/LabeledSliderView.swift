@@ -10,6 +10,7 @@ struct LabeledSliderView: View {
     let step:       Double
     @Binding var value: Double
 
+    @Environment(\.isEnabled) private var isEnabled
     @State  private var textInput:  String = ""
     @FocusState private var focused: Bool
 
@@ -71,6 +72,7 @@ struct LabeledSliderView: View {
                 }
                 .onAppear { textInput = formatValue(value) }
         }
+        .opacity(isEnabled ? 1 : 0.4)   // fade like a disabled system row
     }
 
     // iPhone sheets: body-size rows like the rest of the Form, slider fills the row.

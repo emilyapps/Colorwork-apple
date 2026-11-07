@@ -37,6 +37,7 @@ struct TilingPreviewView: View {
                     width:  CGFloat(doc.tilingCols) * cs,
                     height: CGFloat(doc.tilingRows) * cs)
                 .padding(margin)
+                .frame(width: geo.size.width, height: geo.size.height)   // centre it
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
