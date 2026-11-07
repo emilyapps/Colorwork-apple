@@ -33,7 +33,7 @@ struct ColorPickerSheetView: View {
                         .stroke(.secondary.opacity(0.3), lineWidth: 1))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(activeColor.hex.uppercased())
-                        .font(.system(size: 13, design: .monospaced))
+                        .font(.footnote.monospaced())
                     hexField
                 }
                 Spacer()
@@ -103,7 +103,7 @@ struct ColorPickerSheetView: View {
                     let candidate = "#" + v.trimmingCharacters(in: .whitespaces).lowercased()
                     if candidate.count == 7 { activeColor.setHex(candidate); doc.rebuildDescriptors() }
                 }))
-            .font(.system(size: 13, design: .monospaced))
+            .font(.footnote.monospaced())
             .frame(width: 80)
         }
     }

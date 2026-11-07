@@ -20,13 +20,13 @@ Audit of the iPhone app against Apple's Human Interface Guidelines, decided with
    - Bottom toolbar, icons with labels: Generate · Settings · Colors · Tiling · ⋯ (Fit to Screen, Clear in red).
    - Fit happens automatically when chart size changes or on rotation. No double-tap (it conflicts with paint-on-touch).
    - Canvas uses the empty space above it.
-4. **Dynamic Type.** All interface text scales with the system text size. Canvas row/column numbers scale with cell size instead.
+4. **Dynamic Type.** All interface text scales with the system text size. Canvas row/column numbers scale with cell size instead. At accessibility sizes the bottom toolbar shows icons only (long-press shows the name, Large Content Viewer); toolbar and stitch-bar icons stop growing at xxxLarge.
 
 Build order: 1 → 2 → 3 → 4, each checked in the Simulator.
 
 ## Later
 
-5. Settings sheet: title and Done; plain words for "D4", "N", "ρ"; tidy slider rows and fonts.
+5. Settings sheet: title and Done; plain words for "D4", "N", "ρ"; tidy slider rows and fonts; at accessibility text sizes put labels above their controls (e.g. "Rota-tion" wraps beside its picker).
 6. "Copies" enabled when no repeat is on.
 7. Tiling preview pushes settings below the fold.
 8. Colors sheet: hex shown twice, no selected-swatch mark; palette not grouped by hue.

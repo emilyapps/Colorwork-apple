@@ -16,18 +16,18 @@ struct LabeledSliderView: View {
     var body: some View {
         HStack(spacing: 6) {
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.caption2.weight(.semibold))
                 .frame(width: 44, alignment: .leading)
             Text(formatMin)
-                .font(.system(size: 11))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
             Slider(value: $value, in: range, step: step)
                 .frame(maxWidth: 120)
             Text(formatMax)
-                .font(.system(size: 11))
+                .font(.caption2)
                 .foregroundStyle(.secondary)
             TextField(placeholder, text: $textInput)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.caption2.monospaced())
                 .frame(width: 42)
                 #if os(iOS)
                 // The number pad has no Return key, so use the numbers keyboard, whose

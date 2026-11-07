@@ -20,7 +20,7 @@ struct NamedPaletteView: View {
                 .font(.headline)
             // Fixed-height label so the grid doesn't shift on hover
             Text(hoveredHex ?? " ")
-                .font(.system(size: 10, design: .monospaced))
+                .font(.caption2.monospaced())
                 .foregroundStyle(.secondary)
                 .frame(height: 14, alignment: .leading)
             ScrollView {

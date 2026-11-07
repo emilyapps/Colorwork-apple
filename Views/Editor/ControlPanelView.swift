@@ -54,7 +54,7 @@ struct ControlPanelView: View {
                             .from(rotation: doc.symmetryGroup.rotationFactor, reflection: !doc.symmetryGroup.hasReflection)))
                 }
                 Text(doc.symmetryGroup.displayName)
-                    .font(.system(size: 11, design: .monospaced))
+                    .font(.caption2.monospaced())
                     .foregroundStyle(.secondary)
                 if !doc.limitingStitches.isEmpty {
                     Text("Rotation and horizontal-axis reflection are unavailable: "

@@ -92,6 +92,7 @@ struct StitchBar: View {
         HStack(spacing: 6) {
             barButton(.color, label: "Paint colors") {
                 Image(systemName: "paintbrush.pointed").font(.title3)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
             Divider().frame(height: 28)
             ForEach(recents, id: \.self) { stitch in
@@ -106,8 +107,12 @@ struct StitchBar: View {
                     .font(.subheadline)
                     .lineLimit(1)
                     .frame(minWidth: 44, minHeight: 44)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
             }
             .accessibilityLabel("All Stitches")
+            .accessibilityShowsLargeContentViewer {
+                Label("All Stitches", systemImage: "square.grid.2x2")
+            }
             .popover(isPresented: $showAll) {
                 allStitches.presentationCompactAdaptation(.popover)
             }

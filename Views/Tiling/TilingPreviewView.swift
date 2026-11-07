@@ -19,7 +19,7 @@ struct TilingPreviewView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
                     Text("Enable H or V repeat\nin the Tiling tab")
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }

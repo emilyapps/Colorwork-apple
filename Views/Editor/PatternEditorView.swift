@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 
 struct PatternEditorView: View {
     @Environment(PatternDocument.self) var doc
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showControls     = false
     @State private var showColors       = false
     @State private var showTiling       = false
@@ -36,7 +37,7 @@ struct PatternEditorView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Pattern")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.footnote.weight(.semibold))
                         StitchToolPicker()
                     }
                     .padding([.top, .leading], 8)
@@ -47,7 +48,7 @@ struct PatternEditorView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(doc.kind == .tile ? "Tiling Preview"
                          : doc.wedgeView == .chart ? "Chart View" : "Circular View")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .padding([.top, .leading], 8)
                     if doc.kind == .wedge { WedgePreviewView() } else { TilingPreviewView() }
                 }
@@ -140,12 +141,22 @@ struct PatternEditorView: View {
 
     /// Icon over a short caption, 44pt+ tall, scaling with Dynamic Type.
     private func toolbarLabel(_ title: String, _ icon: String) -> some View {
+        // Like system toolbars: at accessibility sizes the caption is dropped
+        // and a long press shows the name in the Large Content Viewer.
         VStack(spacing: 2) {
             Image(systemName: icon).font(.title3)
-            Text(title).font(.caption2)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            if !typeSize.isAccessibilitySize {
+                Text(title).font(.caption2).lineLimit(1)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 48)
         .contentShape(Rectangle())
+        .accessibilityLabel(title)
+        .accessibilityShowsLargeContentViewer {
+            Image(systemName: icon)
+            Text(title)
+        }
     }
     #endif
 

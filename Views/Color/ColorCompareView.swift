@@ -18,10 +18,10 @@ struct ColorCompareView: View {
             let ratio = ColorMath.contrastRatio(doc.fillColor.hex, doc.bgColor.hex)
             HStack {
                 Text(String(format: "Contrast: %.1f:1", ratio))
-                    .font(.system(size: 12))
+                    .font(.caption)
                 Spacer()
                 Text(wcagLabel(ratio))
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
                     .padding(.horizontal, 6).padding(.vertical, 2)
                     .background(wcagColor(ratio).opacity(0.2))
                     .cornerRadius(4)
