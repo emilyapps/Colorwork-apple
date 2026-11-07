@@ -9,9 +9,11 @@ A charting tool for knitting patterns: colorwork and lace motifs drawn on a grid
 **Pattern**:
 The chart itself — Cells, Stitches, colors, Symmetry Group; for a Tile, one tile; for a Wedge, one wedge.
 _Avoid_: Chart (as a separate concept), design
+Opening a Pattern starts a new Project; a Pattern changes only through Save as Pattern.
 
 **Project**:
 A Pattern plus how it is repeated and shown: border strips, Planar or Radial Repeat settings (including a Wedge's N), and view settings.
+The open Project autosaves; it is the working document.
 _Avoid_: Tiled pattern
 
 **Pattern Kind**:

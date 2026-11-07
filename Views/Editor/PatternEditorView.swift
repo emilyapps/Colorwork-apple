@@ -57,7 +57,7 @@ struct PatternEditorView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Generate") { doc.generate() }
                 Button("Clear")    { doc.clear() }
-                Button("", systemImage: "arrow.up.left.and.arrow.down.right") { doc.fitCellSize() }
+                Button("Fit to Screen", systemImage: "arrow.up.left.and.arrow.down.right") { doc.fitCellSize() }
             }
         }
     }
@@ -79,27 +79,28 @@ struct PatternEditorView: View {
                 .padding(.top, 6)
 
             HStack {
-                Button("", systemImage: "wand.and.stars")                         { doc.generate() }
+                Button("Generate", systemImage: "wand.and.stars")                         { doc.generate() }
                 Spacer()
-                Button("", systemImage: "trash")                                  { doc.clear() }
+                Button("Clear", systemImage: "trash")                                  { doc.clear() }
                 Spacer()
-                Button("", systemImage: "slider.horizontal.3")                    { showControls.toggle() }
+                Button("Settings", systemImage: "slider.horizontal.3")                    { showControls.toggle() }
                 Spacer()
-                Button("", systemImage: "paintpalette")                           { showColors.toggle() }
+                Button("Colors", systemImage: "paintpalette")                           { showColors.toggle() }
                 Spacer()
-                Button("", systemImage: "square.grid.3x3")                        { showTiling.toggle() }
+                Button("Tiling", systemImage: "square.grid.3x3")                        { showTiling.toggle() }
                 Spacer()
-                Button("", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
+                Button("Fit to Screen", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
                 Spacer()
-                Button("", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
+                Button("Undo", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
                     .disabled(!doc.canUndo)
             }
+            .labelStyle(.iconOnly)
             .padding(.horizontal)
             .padding(.vertical, 8)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button("", systemImage: "square.and.arrow.up") { export() }
+                Button("Export", systemImage: "square.and.arrow.up") { export() }
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {
