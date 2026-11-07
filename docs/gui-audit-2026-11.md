@@ -26,7 +26,7 @@ Build order: 1 → 2 → 3 → 4, each checked in the Simulator.
 
 ## Later
 
-5. Settings sheet: title and Done; plain words for "D4", "N", "ρ"; tidy slider rows and fonts; at accessibility text sizes put labels above their controls (e.g. "Rota-tion" wraps beside its picker).
+5. Settings sheet (done 2026-11-07): title and Done; shorthand "D4", "N", "ρ" kept by choice; slider rows even (body text, full-width slider, aligned tracks, boxed value). Still open: at accessibility text sizes put labels above their controls (e.g. "Rota-tion" wraps beside its picker).
 6. "Copies" enabled when no repeat is on.
 7. Tiling preview pushes settings below the fold.
 8. Colors sheet: hex shown twice, no selected-swatch mark; palette not grouped by hue.

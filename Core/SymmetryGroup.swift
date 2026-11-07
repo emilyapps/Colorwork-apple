@@ -141,6 +141,19 @@ enum SymmetryGroup: String, CaseIterable, Codable {
         }
     }
 
+    /// A familiar knitting motif with exactly this symmetry, shown beside the name.
+    var motifExample: String {
+        switch self {
+        case .c1:  return "paisley"
+        case .d1:  return "heart"
+        case .d1h: return "flying geese"
+        case .c2:  return "propeller"
+        case .d2:  return "hugs and kisses"
+        case .c4:  return "pinwheel"
+        case .d4:  return "snowflake"
+        }
+    }
+
     // MARK: Reflection axis
 
     enum ReflectionAxis { case none, vertical, horizontal }

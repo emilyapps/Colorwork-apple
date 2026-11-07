@@ -116,7 +116,16 @@ struct PatternEditorView: View {
             Button("SVG")  { shareFile(format: .svg) }
         }
         .sheet(isPresented: $showControls) {
-            ControlPanelView()
+            NavigationStack {
+                ControlPanelView()
+                    .navigationTitle("Settings")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showControls = false }
+                        }
+                    }
+            }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
