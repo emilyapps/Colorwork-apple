@@ -83,17 +83,50 @@ final class PatternStore {
 
     // MARK: - Projects
 
-    func saveProject(from doc: PatternDocument, name: String) throws {
-        let snapshot = PatternSnapshot(from: doc)
-        let data = try encoder.encode(snapshot)
-        let project = SDProject(name: name, data: data)
+    @discardableResult
+    func saveProject(from doc: PatternDocument, name: String) throws -> SDProject {
+        let project = SDProject(name: name, data: Data())
+        try write(doc, into: project)
+        context.insert(project)
+        try context.save()
+        return project
+    }
+
+    /// Writes the document into an existing Project. Returns false when nothing changed.
+    @discardableResult
+    func updateProject(_ project: SDProject, from doc: PatternDocument) throws -> Bool {
+        let data = try encoder.encode(PatternSnapshot(from: doc))
+        guard data != project.data || project.name != doc.currentPatternName else { return false }
+        try write(doc, into: project, data: data)
+        try context.save()
+        return true
+    }
+
+    private func write(_ doc: PatternDocument, into project: SDProject, data: Data? = nil) throws {
+        project.data = try data ?? encoder.encode(PatternSnapshot(from: doc))
+        project.name = doc.currentPatternName
         project.thumbnailData = Self.makeThumbnail(
             grid: doc.grid, H: doc.H, W: doc.W,
             fillHex: doc.fillColor.hex, bgHex: doc.bgColor.hex,
             colStrip: doc.colStrip, rowStrip: doc.rowStrip,
             tiling: doc.kind == .tile ? doc.tiling : TilingSettings())
-        context.insert(project)
-        try context.save()
+    }
+
+    func project(id: UUID) -> SDProject? {
+        try? context.fetch(FetchDescriptor<SDProject>(predicate: #Predicate { $0.id == id })).first
+    }
+
+    func pattern(named name: String) -> SDPattern? {
+        try? context.fetch(FetchDescriptor<SDPattern>(predicate: #Predicate { $0.name == name })).first
+    }
+
+    /// "Untitled", then "Untitled 2", "Untitled 3", … skipping names already used by Projects.
+    func uniqueProjectName(_ base: String = "Untitled") -> String {
+        let used = Set((try? listProjects())?.map(\.name) ?? [])
+        if !used.contains(base) { return base }
+        var n = 2
+        while used.contains("\(base) \(n)") { n += 1 }
+        return "\(base) \(n)"
     }
 
     func loadProject(_ project: SDProject, into doc: PatternDocument) throws {
@@ -155,5 +188,86 @@ final class PatternStore {
         #else
         return renderer.uiImage.flatMap { $0.pngData() }
         #endif
+    }
+}
+
+// MARK: - Project session (autosave model)
+// The open Project is the working document and autosaves; opening a Pattern starts
+// a new Project from it; a Pattern changes only through Save as Pattern.
+
+extension PatternStore {
+
+    /// Saves the open Project if it changed. Recreates nothing if it was deleted.
+    func autosave(_ doc: PatternDocument) {
+        guard let id = doc.currentProjectID, let project = project(id: id) else { return }
+        try? updateProject(project, from: doc)
+    }
+
+    /// At launch: reopen the last Project, or start a new Untitled one.
+    func openInitialProject(lastID: UUID?, into doc: PatternDocument) {
+        if let id = lastID, let p = project(id: id) {
+            try? loadProject(p, into: doc)
+            doc.currentProjectID = p.id
+        } else {
+            doc.currentPatternName = uniqueProjectName()
+            doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
+        }
+        doc.resetUndo()
+    }
+
+    func openProject(_ project: SDProject, into doc: PatternDocument) {
+        autosave(doc)
+        try? loadProject(project, into: doc)
+        doc.currentProjectID = project.id
+        doc.resetUndo()
+    }
+
+    /// Opening a Pattern starts a new Project from it; the Pattern is not changed.
+    func startProject(from pattern: SDPattern, into doc: PatternDocument) {
+        autosave(doc)
+        loadPattern(pattern, into: doc)
+        doc.currentPatternName = uniqueProjectName(pattern.name)
+        doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
+        doc.resetUndo()
+    }
+
+    func newProject(into doc: PatternDocument) {
+        autosave(doc)
+        PatternSnapshot(from: PatternDocument()).apply(to: doc)
+        doc.clear()
+        doc.currentPatternName = uniqueProjectName()
+        doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
+        doc.resetUndo()
+    }
+
+    /// Copies the open Project and switches to the copy.
+    func duplicateProject(_ doc: PatternDocument) {
+        autosave(doc)
+        doc.currentPatternName = uniqueProjectName(doc.currentPatternName + " copy")
+        doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
+        doc.resetUndo()
+    }
+
+    func duplicate(_ project: SDProject) {
+        let copy = SDProject(name: uniqueProjectName(project.name + " copy"), data: project.data)
+        copy.thumbnailData = project.thumbnailData
+        context.insert(copy)
+        try? context.save()
+    }
+
+    func rename(_ doc: PatternDocument, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        doc.currentPatternName = trimmed
+        autosave(doc)
+    }
+
+    /// Save as Pattern; replaces an existing Pattern of the same name, keeping its place in the list.
+    func saveAsPattern(_ doc: PatternDocument, name: String) {
+        let old = pattern(named: name)
+        let order = old?.sortOrder
+        if let old { context.delete(old) }
+        try? savePattern(from: doc, name: name)
+        if let order, let new = pattern(named: name) { new.sortOrder = order; try? context.save() }
     }
 }

@@ -163,6 +163,8 @@ final class PatternDocument {
     // MARK: - Persistence metadata
     var currentPatternName: String = "Untitled"
     var isDirty:            Bool   = false
+    /// The Project this document autosaves into (nil until one is opened or created).
+    var currentProjectID:   UUID?
 
     // MARK: - Undo
     var undoManager: UndoManager?
@@ -180,6 +182,13 @@ final class PatternDocument {
         undoManager?.setActionName(name)
         canUndo = undoManager?.canUndo ?? false
         canRedo = undoManager?.canRedo ?? false
+    }
+
+    /// Forget undo history, e.g. when another Project is opened.
+    func resetUndo() {
+        undoManager?.removeAllActions()
+        canUndo = false
+        canRedo = false
     }
 
     // MARK: - Cached descriptors (invalidated when state changes)

@@ -20,6 +20,7 @@ struct PatternEditorView: View {
             iphoneLayout
             #endif
         }
+        .modifier(ProjectCommands(export: export))
     }
 
     // MARK: - macOS: sidebar + pattern + tiling

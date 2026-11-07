@@ -8,6 +8,12 @@ import SwiftData
 struct WindowRootView: View {
     @State private var document    = PatternDocument()
     @State private var undoManager = UndoManager()
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase)   private var scenePhase
+    @AppStorage("lastProjectID") private var lastProjectID = ""
+
+    /// Projects open in some window, so a second Mac window doesn't reopen the same one.
+    @MainActor private static var openProjectIDs: Set<UUID> = []
 
     var body: some View {
         ContentView()
@@ -16,16 +22,46 @@ struct WindowRootView: View {
                 undoManager.levelsOfUndo = 50
                 document.undoManager = undoManager
             }
+            .task {
+                let store = PatternStore(context: modelContext)
+                let last = UUID(uuidString: lastProjectID).flatMap {
+                    Self.openProjectIDs.contains($0) ? nil : $0
+                }
+                store.openInitialProject(lastID: last, into: document)
+                // Autosave: write the open Project about once a second when it changed.
+                while !Task.isCancelled {
+                    track(document.currentProjectID)
+                    store.autosave(document)
+                    try? await Task.sleep(for: .seconds(1))
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active { PatternStore(context: modelContext).autosave(document) }
+            }
+            .onDisappear {
+                PatternStore(context: modelContext).autosave(document)
+                if let id = document.currentProjectID { Self.openProjectIDs.remove(id) }
+            }
             #if os(macOS)
             .focusedSceneValue(\.patternDocument, document)
             #endif
+    }
+
+    @State private var trackedID: UUID?
+    private func track(_ id: UUID?) {
+        guard id != trackedID else { return }
+        if let old = trackedID { Self.openProjectIDs.remove(old) }
+        if let id { Self.openProjectIDs.insert(id); lastProjectID = id.uuidString }
+        trackedID = id
     }
 }
 
 struct ContentView: View {
     @Environment(PatternDocument.self) var doc
-    @Environment(\.modelContext) var modelContext
     @Environment(\.horizontalSizeClass) var sizeClass
+
+    private enum Tab { case editor, library }
+    @State private var tab: Tab = .editor
 
     var body: some View {
         #if os(macOS)
@@ -41,21 +77,6 @@ struct ContentView: View {
     private var macContent: some View {
         PatternEditorView()
             .navigationTitle(doc.currentPatternName)
-            .toolbar {
-                ToolbarItemGroup(placement: .navigation) {
-                    saveLoadMenu
-                }
-            }
-            .focusedSceneValue(\.savePatternAction, {
-                saveName = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
-                saveType = .pattern
-                showSaveAlert = true
-            })
-            .focusedSceneValue(\.saveProjectAction, {
-                saveName = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
-                saveType = .project
-                showSaveAlert = true
-            })
     }
     #endif
 
@@ -74,76 +95,107 @@ struct ContentView: View {
             }
             else {
                 // iPhone: tab bar
-                TabView {
+                TabView(selection: $tab) {
                     NavigationStack {
                         PatternEditorView()
-                            .navigationTitle(doc.currentPatternName)
-                            .navigationBarTitleDisplayMode(.inline)
-                            .toolbar {
-                                ToolbarItem(placement: .navigationBarTrailing) {
-                                    saveLoadMenu
-                                }
-                            }
                     }
                     .tabItem { Label("Editor", systemImage: "square.grid.3x3") }
+                    .tag(Tab.editor)
 
                     NavigationStack {
-                        LibraryView()
+                        LibraryView(onOpen: { tab = .editor })
                             .navigationTitle("Library")
                     }
                     .tabItem { Label("Library", systemImage: "folder") }
+                    .tag(Tab.library)
                 }
             }
         }
     }
     #endif
+}
 
-    // MARK: - Persistence actions
+// MARK: - Project commands
+// New Project, Rename, Duplicate, Save as Pattern — shared by the iOS title menu
+// and the Mac toolbar menu / menu bar.
 
-    private enum SaveType { case pattern, project }
+struct ProjectCommands: ViewModifier {
+    @Environment(PatternDocument.self) var doc
+    @Environment(\.modelContext) var modelContext
+    var export: () -> Void
 
-    @State private var saveName      = ""
-    @State private var showSaveAlert = false
-    @State private var saveType: SaveType = .pattern
+    @State private var patternName       = ""
+    @State private var showPatternName   = false
+    @State private var confirmReplace    = false
+    @State private var renameText        = ""
+    @State private var showRename        = false
 
-    private var saveLoadMenu: some View {
-        Menu {
-            Button("Save Pattern…") {
-                saveName  = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
-                saveType  = .pattern
-                showSaveAlert = true
+    private var store: PatternStore { PatternStore(context: modelContext) }
+
+    func body(content: Content) -> some View {
+        content
+            #if os(iOS)
+            .navigationTitle(doc.currentPatternName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarRole(.editor)
+            .toolbarTitleMenu { menuItems }
+            #else
+            .toolbar {
+                ToolbarItem(placement: .navigation) {
+                    Menu { menuItems } label: { Label("Project", systemImage: "doc") }
+                }
             }
-            Button("Save Project…") {
-                saveName  = doc.currentPatternName == "Untitled" ? "" : doc.currentPatternName
-                saveType  = .project
-                showSaveAlert = true
+            .focusedSceneValue(\.savePatternAction, beginSaveAsPattern)
+            .focusedSceneValue(\.newProjectAction, { store.newProject(into: doc) })
+            .focusedSceneValue(\.duplicateProjectAction, { store.duplicateProject(doc) })
+            #endif
+            .alert("Rename Project", isPresented: $showRename) {
+                TextField("Name", text: $renameText)
+                Button("Rename") { store.rename(doc, to: renameText) }
+                Button("Cancel", role: .cancel) { }
             }
-        } label: {
-            Label("Library", systemImage: "folder")
-        }
-        .alert(saveType == .pattern ? "Save Pattern" : "Save Project",
-               isPresented: $showSaveAlert) {
-            TextField("Name", text: $saveName)
-            Button("Save") { commitSave() }
-            Button("Cancel", role: .cancel) { }
-        }
+            .alert("Save as Pattern", isPresented: $showPatternName) {
+                TextField("Name", text: $patternName)
+                Button("Save") { checkAndSavePattern() }
+                Button("Cancel", role: .cancel) { }
+            } message: {
+                Text("Opening a pattern starts a new project.")
+            }
+            .confirmationDialog("Replace the existing pattern \"\(patternName)\"?",
+                                isPresented: $confirmReplace, titleVisibility: .visible) {
+                Button("Replace", role: .destructive) { store.saveAsPattern(doc, name: patternName) }
+            }
     }
 
-    private func commitSave() {
-        let name = saveName.isEmpty
-            ? (saveType == .pattern ? "Pattern" : "Project")
-            : saveName
-        let store = PatternStore(context: modelContext)
-        switch saveType {
-        case .pattern: try? store.savePattern(from: doc, name: name)
-        case .project: try? store.saveProject(from: doc, name: name)
+    @ViewBuilder private var menuItems: some View {
+        Button("New Project", systemImage: "plus") { store.newProject(into: doc) }
+        Button("Rename…", systemImage: "pencil") {
+            renameText = doc.currentPatternName
+            showRename = true
         }
+        Button("Duplicate", systemImage: "plus.square.on.square") { store.duplicateProject(doc) }
+        Button("Save as Pattern…", systemImage: "square.and.arrow.down") { beginSaveAsPattern() }
+        Button("Export…", systemImage: "square.and.arrow.up") { export() }
+    }
+
+    private func beginSaveAsPattern() {
+        patternName = doc.currentPatternName
+        showPatternName = true
+    }
+
+    private func checkAndSavePattern() {
+        let name = patternName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { return }
+        patternName = name
+        if store.pattern(named: name) != nil { confirmReplace = true }
+        else { store.saveAsPattern(doc, name: name) }
     }
 }
 
 // MARK: - LibraryView
 
 struct LibraryView: View {
+    var onOpen: () -> Void = {}
     @Environment(PatternDocument.self) var doc
     @Environment(\.modelContext) var modelContext
     @Environment(\.dismiss) var dismiss
@@ -154,9 +206,6 @@ struct LibraryView: View {
                   SortDescriptor(\SDProject.createdAt, order: .reverse)]) var projects: [SDProject]
 
     @State private var selectedTab = 0
-    @State private var saveName    = ""
-    @State private var statusMsg   = ""
-    @FocusState private var nameFieldFocused: Bool
 
     @State private var patternPendingDelete: SDPattern? = nil
     @State private var projectPendingDelete: SDProject? = nil
@@ -177,19 +226,29 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("Library")
-        #if os(iOS)
-        .toolbar { EditButton() }
-        #endif
+        .toolbar {
+            #if os(iOS)
+            ToolbarItem(placement: .topBarLeading) { EditButton() }
+            #endif
+            if selectedTab == 1 {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("New Project", systemImage: "plus") {
+                        PatternStore(context: modelContext).newProject(into: doc)
+                        onOpen()
+                    }
+                }
+            }
+        }
     }
 
     private var patternList: some View {
         VStack(spacing: 0) {
             List {
+                Section {
                 ForEach(patterns) { p in
                     Button {
-                        PatternStore(context: modelContext).loadPattern(p, into: doc)
-                        statusMsg = "Loaded \(p.name)"
-                        dismiss()
+                        PatternStore(context: modelContext).startProject(from: p, into: doc)
+                        onOpen()
                     } label: {
                         HStack(spacing: 10) {
                             thumbView(p.thumbnailData, size: 44)
@@ -199,7 +258,10 @@ struct LibraryView: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             patternPendingDelete = p
@@ -210,28 +272,11 @@ struct LibraryView: View {
                     if let i = idxs.first { patternPendingDelete = patterns[i] }
                 }
                 .onMove(perform: movePatterns)
+            } footer: {
+                Text("Opening a pattern starts a new project.")
+            }
             }
 
-            Divider()
-
-            VStack(spacing: 8) {
-                TextField("Name…", text: $saveName)
-                    .textFieldStyle(.roundedBorder)
-                    .focused($nameFieldFocused)
-                Button("Save Pattern") {
-                    nameFieldFocused = false
-                    let name = saveName.isEmpty ? "Pattern" : saveName
-                    try? PatternStore(context: modelContext).savePattern(from: doc, name: name)
-                    statusMsg = "Saved \(name)"
-                    saveName = ""
-                }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
-                if !statusMsg.isEmpty {
-                    Text(statusMsg).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            .padding()
         }
         .confirmationDialog(
             "Delete \"\(patternPendingDelete?.name ?? "")\"?",
@@ -254,9 +299,8 @@ struct LibraryView: View {
             List {
                 ForEach(projects) { p in
                     Button {
-                        try? PatternStore(context: modelContext).loadProject(p, into: doc)
-                        statusMsg = "Loaded \(p.name)"
-                        dismiss()
+                        PatternStore(context: modelContext).openProject(p, into: doc)
+                        onOpen()
                     } label: {
                         HStack(spacing: 10) {
                             thumbView(p.thumbnailData, size: 44)
@@ -266,11 +310,22 @@ struct LibraryView: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             projectPendingDelete = p
                         } label: { Label("Delete", systemImage: "trash") }
+                    }
+                    .contextMenu {
+                        Button("Duplicate", systemImage: "plus.square.on.square") {
+                            PatternStore(context: modelContext).duplicate(p)
+                        }
+                        Button("Delete", systemImage: "trash", role: .destructive) {
+                            projectPendingDelete = p
+                        }
                     }
                 }
                 .onDelete { idxs in
@@ -279,24 +334,6 @@ struct LibraryView: View {
                 .onMove(perform: moveProjects)
             }
 
-            Divider()
-
-            VStack(spacing: 8) {
-                TextField("Name…", text: $saveName)
-                    .textFieldStyle(.roundedBorder)
-                Button("Save Project") {
-                    let name = saveName.isEmpty ? "Project" : saveName
-                    try? PatternStore(context: modelContext).saveProject(from: doc, name: name)
-                    statusMsg = "Saved \(name)"
-                    saveName = ""
-                }
-                .buttonStyle(.borderedProminent)
-                .frame(maxWidth: .infinity)
-                if !statusMsg.isEmpty {
-                    Text(statusMsg).font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            .padding()
         }
         .confirmationDialog(
             "Delete \"\(projectPendingDelete?.name ?? "")\"?",
@@ -307,7 +344,11 @@ struct LibraryView: View {
         ) {
             Button("Delete", role: .destructive) {
                 if let p = projectPendingDelete {
-                    try? PatternStore(context: modelContext).deleteProject(p)
+                    let store = PatternStore(context: modelContext)
+                    let wasOpen = p.id == doc.currentProjectID
+                    try? store.deleteProject(p)
+                    // The open Project is gone, so start a fresh one to autosave into.
+                    if wasOpen { doc.currentProjectID = nil; store.newProject(into: doc) }
                 }
                 projectPendingDelete = nil
             }
