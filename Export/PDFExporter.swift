@@ -35,58 +35,77 @@ enum Exporter {
 
 enum PDFExporter {
 
-    static func export(doc: PatternDocument, includeTiling: Bool = true) throws -> Data {
-        let tileSize = DescriptorBuilder.tileCanvasSize(
-            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+    /// US Letter, in points, with half-inch margins.
+    static let pageSize = CGSize(width: 612, height: 792)
+    static let margin: CGFloat = 36
 
-        let tileDescs = DescriptorBuilder.tileDescriptors(
-            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
-            domainCells: doc.domainSet, showDomain: false,
-            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+    /// Scale for drawing content of `size` inside the page margins, capped at `maxScale`.
+    static func fitScale(_ size: CGSize, maxScale: CGFloat = .greatestFiniteMagnitude) -> CGFloat {
+        let box = CGSize(width: pageSize.width - 2 * margin, height: pageSize.height - 2 * margin)
+        return min(maxScale, box.width / size.width, box.height / size.height)
+    }
+
+    /// Page 1 is the chart with its legend (and, for a Wedge, its stitch totals). Page 2 is a
+    /// Tile's tiled pattern, drawn with page 1's cell size when it fits and smaller when it
+    /// doesn't, or a Wedge's Circular View. Both are Letter pages.
+    static func export(doc: PatternDocument, includeTiling: Bool = true) throws -> Data {
+        let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let data = NSMutableData()
-        guard let consumer = CGDataConsumer(data: data as CFMutableData) else {
+        var mediaBox = CGRect(origin: .zero, size: pageSize)
+        guard let consumer = CGDataConsumer(data: data as CFMutableData),
+              let ctx = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
             throw ExportError.renderingFailed
         }
 
         // ---- Page 1: Tile ----
-        var mediaBox = CGRect(origin: .zero, size: tileSize)
-        guard let ctx = CGContext(consumer: consumer, mediaBox: &mediaBox, nil) else {
-            throw ExportError.renderingFailed
-        }
+        let tileScale = fitScale(tileSize)
+        drawPage(tileDescs, size: tileSize, scale: tileScale, into: ctx)
 
-        ctx.beginPDFPage(nil)
-        applyYFlip(ctx, pageHeight: tileSize.height)
-        renderDescriptors(tileDescs, into: ctx)
-        ctx.endPDFPage()
-
-        // ---- Page 2: Tiling preview (optional) ----
-        if includeTiling && !doc.tilingDescriptors.isEmpty {
-            let cs     = CGFloat(doc.tiling.previewCellSize)
+        // ---- Page 2: Tiled pattern (optional) ----
+        if includeTiling && doc.kind == .wedge {
+            let side = min(pageSize.width, pageSize.height) - 2 * margin
+            let size = CGSize(width: side, height: side)
+            let rings = RadialLayout.descriptors(
+                grid: doc.grid, shaping: ShapingResolver.resolve(doc.stitches),
+                repeats: doc.radialRepeat, flipped: doc.circularFlipped, size: size,
+                fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex)
+            drawPage(rings, size: size, scale: 1, into: ctx)
+        } else if includeTiling && doc.tilingRows > 0 && doc.tilingCols > 0 {
+            let cs = CGFloat(doc.cellSize)
             let pad: CGFloat = 1
-            let previewW = CGFloat(doc.tilingCols) * cs + 2 * pad
-            let previewH = CGFloat(doc.tilingRows) * cs + 2 * pad
-            var previewBox = CGRect(x: 0, y: 0, width: previewW, height: previewH)
-            let mediaBoxData = NSData(bytes: &previewBox, length: MemoryLayout.size(ofValue: previewBox))
-            ctx.beginPDFPage([kCGPDFContextMediaBox: mediaBoxData] as CFDictionary)
-            applyYFlip(ctx, pageHeight: previewH)
-            renderDescriptors(doc.tilingDescriptors, into: ctx)
-            ctx.endPDFPage()
+            let tiling = DescriptorBuilder.tilingDescriptors(
+                tilingGrid: doc.tilingGrid,
+                fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
+                hRepeat: doc.tiling.hRepeat, vRepeat: doc.tiling.vRepeat,
+                stripWidth: doc.tiling.stripWidth,
+                horizontal: doc.tiling.horizontalRepeatType, vertical: doc.tiling.verticalRepeatType,
+                nCopies: doc.tiling.nCopies, W: doc.W, H: doc.H,
+                rowOffset: doc.tiling.rowOffset, colOffset: doc.tiling.colOffset,
+                cellSize: cs, padding: pad, stitchGrid: doc.tilingStitchGrid,
+                noStitchGrid: doc.tilingNoStitchGrid)
+            let size = CGSize(width: CGFloat(tiling.cols) * cs + 2 * pad,
+                              height: CGFloat(tiling.rows) * cs + 2 * pad)
+            drawPage(tiling.descriptors, size: size, scale: fitScale(size, maxScale: tileScale), into: ctx)
         }
 
         ctx.closePDF()
         return data as Data
     }
 
-    /// Y-flip so top-left-origin descriptors map into PDF's bottom-left origin.
-    private static func applyYFlip(_ ctx: CGContext, pageHeight: CGFloat) {
-        ctx.translateBy(x: 0, y: pageHeight)
+    /// One Letter page with the content scaled, centered horizontally and top-aligned.
+    /// The Y-flip maps top-left-origin descriptors into PDF's bottom-left origin.
+    private static func drawPage(_ descriptors: [RenderDescriptor], size: CGSize, scale: CGFloat,
+                                 into ctx: CGContext) {
+        ctx.beginPDFPage(nil)
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: pageSize.height)
         ctx.scaleBy(x: 1, y: -1)
+        ctx.translateBy(x: (pageSize.width - size.width * scale) / 2, y: margin)
+        ctx.scaleBy(x: scale, y: scale)
+        renderDescriptors(descriptors, into: ctx)
+        ctx.restoreGState()
+        ctx.endPDFPage()
     }
 }
 
@@ -96,18 +115,7 @@ enum PNGExporter {
 
     /// Renders the tile as a PNG at the given pixel scale (default 2×).
     static func export(doc: PatternDocument, scale: CGFloat = 2) throws -> Data {
-        let tileSize = DescriptorBuilder.tileCanvasSize(
-            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
-
-        let tileDescs = DescriptorBuilder.tileDescriptors(
-            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
-            domainCells: doc.domainSet, showDomain: false,
-            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+        let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let pixelW = Int(tileSize.width  * scale)
         let pixelH = Int(tileSize.height * scale)
@@ -146,6 +154,28 @@ enum PNGExporter {
     }
 }
 
+// MARK: - Shared tile layout
+
+/// The tile page shared by every export: the canvas's descriptors, stitches and legend
+/// included, without the domain highlight.
+enum ExportTile {
+    static func make(_ doc: PatternDocument) -> (size: CGSize, descriptors: [RenderDescriptor]) {
+        let size = DescriptorBuilder.tileCanvasSize(
+            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
+            hOn: doc.showsColStrip, vOn: doc.showsRowStrip,
+            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches, showsTotals: doc.kind == .wedge)
+        let descriptors = DescriptorBuilder.tileDescriptors(
+            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
+            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
+            domainCells: doc.domainSet, showDomain: false,
+            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
+            hOn: doc.showsColStrip, vOn: doc.showsRowStrip,
+            stripWidth: doc.tiling.stripWidth, stitches: doc.stitches,
+            noStitch: ShapingResolver.resolve(doc.stitches).noStitch, totals: doc.wedgeTotals)
+        return (size, descriptors)
+    }
+}
+
 // MARK: - Shared CoreGraphics helpers
 
 private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGContext) {
@@ -164,13 +194,41 @@ private func renderDescriptors(_ descriptors: [RenderDescriptor], into ctx: CGCo
             }
         case .text(let t):
             drawText(t.text, at: CGPoint(x: t.x, y: t.y),
-                     fontSize: t.fontSize, hexColor: t.fill, ctx: ctx)
+                     fontSize: t.fontSize, hexColor: t.fill, leading: t.leading, ctx: ctx)
         case .line(let l):
             if let stroke = cgColor(l.fill) {
                 ctx.setStrokeColor(stroke)
                 ctx.setLineWidth(l.width)
                 ctx.move(to: CGPoint(x: l.x1, y: l.y1))
                 ctx.addLine(to: CGPoint(x: l.x2, y: l.y2))
+                ctx.strokePath()
+            }
+        case .circle(let c):
+            if let color = cgColor(c.fill) {
+                let rect = CGRect(x: c.cx - c.r, y: c.cy - c.r, width: 2 * c.r, height: 2 * c.r)
+                if c.filled {
+                    ctx.setFillColor(color)
+                    ctx.fillEllipse(in: rect)
+                } else {
+                    ctx.setStrokeColor(color)
+                    ctx.setLineWidth(c.width)
+                    ctx.strokeEllipse(in: rect)
+                }
+            }
+        case .polygon(let p):
+            guard let fill = cgColor(p.fill) else { break }
+            // Stroking in the fill color seals hairline seams between neighbouring polygons.
+            ctx.addLines(between: p.points)
+            ctx.closePath()
+            ctx.setFillColor(fill)
+            ctx.setStrokeColor(fill)
+            ctx.setLineWidth(0.4)
+            ctx.drawPath(using: .fillStroke)
+            if let outline = p.outline.flatMap(cgColor) {
+                ctx.addLines(between: p.points)
+                ctx.closePath()
+                ctx.setStrokeColor(outline)
+                ctx.setLineWidth(p.outlineWidth)
                 ctx.strokePath()
             }
         }
@@ -186,7 +244,7 @@ private func cgColor(_ hex: String) -> CGColor? {
 }
 
 private func drawText(_ text: String, at point: CGPoint,
-                       fontSize: CGFloat, hexColor: String, ctx: CGContext) {
+                       fontSize: CGFloat, hexColor: String, leading: Bool = false, ctx: CGContext) {
     guard let color = cgColor(hexColor) else { return }
     let font = CTFontCreateWithName("Helvetica" as CFString, fontSize, nil)
     let attrs: [CFString: Any] = [
@@ -204,7 +262,7 @@ private func drawText(_ text: String, at point: CGPoint,
     ctx.translateBy(x: point.x, y: point.y)
     ctx.scaleBy(x: 1, y: -1)
     ctx.textMatrix = .identity
-    let cx = bounds.origin.x + bounds.width  / 2
+    let cx = leading ? bounds.origin.x : bounds.origin.x + bounds.width / 2
     let cy = bounds.origin.y + bounds.height / 2
     ctx.textPosition = CGPoint(x: -cx, y: -cy)
     CTLineDraw(line, ctx)

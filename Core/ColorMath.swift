@@ -110,6 +110,11 @@ enum ColorMath {
         return (hi + 0.05) / (lo + 0.05)
     }
 
+    /// "#000000" or "#ffffff", whichever contrasts more with the background.
+    static func contrastInkHex(for hex: String) -> String {
+        contrastRatio(hex, "#000000") >= contrastRatio(hex, "#ffffff") ? "#000000" : "#ffffff"
+    }
+
     // MARK: Harmony
 
     /// 7 harmony colours: complement, 2× split, 2× analogous, 2× triadic.

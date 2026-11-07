@@ -55,6 +55,7 @@ struct GridCanvasView: View {
             .onAppear             { doc.canvasAvailableSize = geo.size; doc.fitCellSize() }
             .onChange(of: geo.size) { _, size in doc.canvasAvailableSize = size; doc.fitCellSize() }
         }
+        .overlay(alignment: .top) { SymmetryNoticeBanner() }
         .onChange(of: doc.H) { _, _ in doc.fitCellSize() }
         .onChange(of: doc.W) { _, _ in doc.fitCellSize() }
     }
@@ -62,32 +63,7 @@ struct GridCanvasView: View {
     // MARK: - Drawing
 
     private func draw(_ ctx: GraphicsContext) {
-        for descriptor in doc.tileDescriptors {
-            switch descriptor {
-            case .rect(let r):
-                let rect = CGRect(x: r.x, y: r.y, width: r.w, height: r.h)
-                ctx.fill(Path(rect), with: .color(ColorMath.color(from: r.fill)))
-                if r.outlineWidth > 0 {
-                    ctx.stroke(Path(rect),
-                               with: .color(ColorMath.color(from: r.outline)),
-                               lineWidth: r.outlineWidth)
-                }
-            case .text(let t):
-                ctx.draw(
-                    Text(t.text)
-                        .font(.system(size: t.fontSize))
-                        .foregroundColor(ColorMath.color(from: t.fill)),
-                    at: CGPoint(x: t.x, y: t.y),
-                    anchor: .center)
-            case .line(let l):
-                var path = Path()
-                path.move(to: CGPoint(x: l.x1, y: l.y1))
-                path.addLine(to: CGPoint(x: l.x2, y: l.y2))
-                ctx.stroke(path,
-                           with: .color(ColorMath.color(from: l.fill)),
-                           lineWidth: l.width)
-            }
-        }
+        drawDescriptors(doc.tileDescriptors, in: ctx)
     }
 
     // MARK: - Interaction
@@ -105,7 +81,13 @@ struct GridCanvasView: View {
         let key = CellIndex(row: cell.row, col: cell.col)
         guard !dragVisited.contains(key) else { return }
         dragVisited.insert(key)
-        doc.toggleCell(cell, region: region)
+        switch doc.paintTool {
+        case .color:
+            doc.toggleCell(cell, region: region)
+        case .stitch(let stitch):
+            // Border strips are color-only
+            if region == .tile { doc.paintStitch(stitch, at: cell) }
+        }
     }
 
     private func endDrag() {
@@ -143,5 +125,75 @@ struct GridCanvasView: View {
             return (CellIndex(row: row - H, col: col - W), .corner)
         }
         return nil
+    }
+}
+
+/// Explains why painting a stitch changed the Symmetry Group, then fades out.
+private struct SymmetryNoticeBanner: View {
+    @Environment(PatternDocument.self) var doc
+
+    var body: some View {
+        if let notice = doc.symmetryNotice {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "info.circle")
+                Text(notice)
+                    .font(.callout)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button { doc.symmetryNotice = nil } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
+            }
+            .padding(10)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+            .padding(8)
+            .task(id: notice) {
+                try? await Task.sleep(for: .seconds(8))
+                doc.symmetryNotice = nil
+            }
+        }
+    }
+}
+
+/// Draws render descriptors into a SwiftUI Canvas; shared by every on-screen chart.
+func drawDescriptors(_ descriptors: [RenderDescriptor], in ctx: GraphicsContext) {
+    for descriptor in descriptors {
+        switch descriptor {
+        case .rect(let r):
+            let rect = CGRect(x: r.x, y: r.y, width: r.w, height: r.h)
+            ctx.fill(Path(rect), with: .color(ColorMath.color(from: r.fill)))
+            if r.outlineWidth > 0 {
+                ctx.stroke(Path(rect),
+                           with: .color(ColorMath.color(from: r.outline)),
+                           lineWidth: r.outlineWidth)
+            }
+        case .text(let t):
+            ctx.draw(
+                Text(t.text)
+                    .font(.system(size: t.fontSize))
+                    .foregroundColor(ColorMath.color(from: t.fill)),
+                at: CGPoint(x: t.x, y: t.y),
+                anchor: t.leading ? .leading : .center)
+        case .line(let l):
+            var path = Path()
+            path.move(to: CGPoint(x: l.x1, y: l.y1))
+            path.addLine(to: CGPoint(x: l.x2, y: l.y2))
+            ctx.stroke(path,
+                       with: .color(ColorMath.color(from: l.fill)),
+                       lineWidth: l.width)
+        case .circle(let c):
+            let path = Path(ellipseIn: CGRect(x: c.cx - c.r, y: c.cy - c.r,
+                                              width: 2 * c.r, height: 2 * c.r))
+            let color = ColorMath.color(from: c.fill)
+            if c.filled { ctx.fill(path, with: .color(color)) }
+            else        { ctx.stroke(path, with: .color(color), lineWidth: c.width) }
+        case .polygon(let p):
+            var path = Path()
+            path.addLines(p.points)
+            path.closeSubpath()
+            ctx.fill(path, with: .color(ColorMath.color(from: p.fill)))
+            if let outline = p.outline {
+                ctx.stroke(path, with: .color(ColorMath.color(from: outline)), lineWidth: p.outlineWidth)
+            }
+        }
     }
 }

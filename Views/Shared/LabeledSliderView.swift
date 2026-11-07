@@ -26,18 +26,26 @@ struct LabeledSliderView: View {
             Text(formatMax)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
-            TextField("", text: $textInput)
+            TextField(placeholder, text: $textInput)
                 .font(.system(size: 11, design: .monospaced))
                 .frame(width: 42)
                 #if os(iOS)
-                .keyboardType(.decimalPad)
+                // The number pad has no Return key, so use the numbers keyboard, whose
+                // Return key reads "done" and commits the value.
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
+                .autocorrectionDisabled()
                 #endif
                 .multilineTextAlignment(.trailing)
                 .focused($focused)
                 .onSubmit  { commit() }
                 .onChange(of: focused) { _, isNowFocused in
                     if isNowFocused {
+                        #if os(iOS)
+                        textInput = ""                    // typing replaces; the value shows as placeholder
+                        #else
                         textInput = formatValue(value)   // show current value when entering field
+                        #endif
                     } else {
                         commit()                          // parse + clamp when leaving field
                     }
@@ -48,6 +56,9 @@ struct LabeledSliderView: View {
                 .onAppear { textInput = formatValue(value) }
         }
     }
+
+    /// While the field is cleared for typing, the current value shows faintly.
+    private var placeholder: String { focused ? formatValue(value) : "" }
 
     private func commit() {
         let parsed = step < 1 ? Double(textInput) : Double(textInput).map { Double(Int($0.rounded())) }

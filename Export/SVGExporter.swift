@@ -8,18 +8,7 @@ import Foundation
 enum SVGExporter {
 
     static func export(doc: PatternDocument) throws -> Data {
-        let tileSize = DescriptorBuilder.tileCanvasSize(
-            H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
-
-        let tileDescs = DescriptorBuilder.tileDescriptors(
-            grid: doc.grid, H: doc.H, W: doc.W, cellSize: CGFloat(doc.cellSize),
-            fillColor: doc.fillColor.hex, bgColor: doc.bgColor.hex,
-            domainCells: doc.domainSet, showDomain: false,
-            colStrip: doc.colStrip, rowStrip: doc.rowStrip, corner: doc.corner,
-            hOn: doc.tiling.hRepeat, vOn: doc.tiling.vRepeat,
-            stripWidth: doc.tiling.stripWidth)
+        let (tileSize, tileDescs) = ExportTile.make(doc)
 
         let w = tileSize.width
         let h = tileSize.height
@@ -41,12 +30,23 @@ enum SVGExporter {
             case .line(let l):
                 lines.append("  <line x1=\"\(f(l.x1))\" y1=\"\(f(l.y1))\" x2=\"\(f(l.x2))\" y2=\"\(f(l.y2))\" stroke=\"\(l.fill)\" stroke-width=\"\(f(l.width))\"/>")
 
+            case .circle(let c):
+                let paint = c.filled
+                    ? "fill=\"\(c.fill)\" stroke=\"none\""
+                    : "fill=\"none\" stroke=\"\(c.fill)\" stroke-width=\"\(f(c.width))\""
+                lines.append("  <circle cx=\"\(f(c.cx))\" cy=\"\(f(c.cy))\" r=\"\(f(c.r))\" \(paint)/>")
+
+            case .polygon(let p):
+                let points = p.points.map { "\(f($0.x)),\(f($0.y))" }.joined(separator: " ")
+                let stroke = p.outline.map { "stroke=\"\($0)\" stroke-width=\"\(f(p.outlineWidth))\"" } ?? "stroke=\"none\""
+                lines.append("  <polygon points=\"\(points)\" fill=\"\(p.fill)\" \(stroke)/>")
+
             case .text(let t):
                 let escaped = t.text
                     .replacingOccurrences(of: "&", with: "&amp;")
                     .replacingOccurrences(of: "<", with: "&lt;")
                     .replacingOccurrences(of: ">", with: "&gt;")
-                lines.append("  <text x=\"\(f(t.x))\" y=\"\(f(t.y))\" font-size=\"\(f(t.fontSize))\" font-family=\"Helvetica, sans-serif\" fill=\"\(t.fill)\" text-anchor=\"middle\" dominant-baseline=\"middle\">\(escaped)</text>")
+                lines.append("  <text x=\"\(f(t.x))\" y=\"\(f(t.y))\" font-size=\"\(f(t.fontSize))\" font-family=\"Helvetica, sans-serif\" fill=\"\(t.fill)\" text-anchor=\"\(t.leading ? "start" : "middle")\" dominant-baseline=\"middle\">\(escaped)</text>")
             }
         }
 

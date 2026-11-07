@@ -33,18 +33,22 @@ struct PatternEditorView: View {
             // Main area: pattern canvas + tiling preview side by side
             HSplitView {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Pattern")
-                        .font(.system(size: 13, weight: .semibold))
-                        .padding([.top, .leading], 8)
+                    HStack {
+                        Text("Pattern")
+                            .font(.system(size: 13, weight: .semibold))
+                        StitchToolPicker()
+                    }
+                    .padding([.top, .leading], 8)
                     GridCanvasView()
                 }
                 .frame(minWidth: 300, idealWidth: .infinity)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Tiling Preview")
+                    Text(doc.kind == .tile ? "Tiling Preview"
+                         : doc.wedgeView == .chart ? "Chart View" : "Circular View")
                         .font(.system(size: 13, weight: .semibold))
                         .padding([.top, .leading], 8)
-                    TilingPreviewView()
+                    if doc.kind == .wedge { WedgePreviewView() } else { TilingPreviewView() }
                 }
                 .frame(minWidth: 300, idealWidth: .infinity)
             }
@@ -63,15 +67,18 @@ struct PatternEditorView: View {
 
     #if os(iOS)
     private var iphoneLayout: some View {
-        ZStack {
+        VStack(spacing: 0) {
             GridCanvasView()
                 .ignoresSafeArea(edges: .horizontal)
-        }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("", systemImage: "square.and.arrow.up") { export() }
-            }
-            ToolbarItemGroup(placement: .bottomBar) {
+                .frame(maxHeight: .infinity)
+
+            Divider()
+
+            StitchToolPicker()
+                .padding(.horizontal)
+                .padding(.top, 6)
+
+            HStack {
                 Button("", systemImage: "wand.and.stars")                         { doc.generate() }
                 Spacer()
                 Button("", systemImage: "trash")                                  { doc.clear() }
@@ -86,6 +93,13 @@ struct PatternEditorView: View {
                 Spacer()
                 Button("", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
                     .disabled(!doc.canUndo)
+            }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button("", systemImage: "square.and.arrow.up") { export() }
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {

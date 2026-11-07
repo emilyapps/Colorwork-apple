@@ -94,7 +94,7 @@ enum PatternEngine {
     static func applyStripReflect(
         row: Int, col: Int,
         in strip: inout [[Bool]],
-        hReflect: Bool, vReflect: Bool
+        acrossVerticalAxis: Bool, acrossHorizontalAxis: Bool
     ) {
         let rows = strip.count
         let cols = strip.first?.count ?? 0
@@ -103,8 +103,8 @@ enum PatternEngine {
         let mr   = rows - 1 - row
         let mc   = cols - 1 - col
 
-        if hReflect && mc != col                          { strip[row][mc] = val }
-        if vReflect && mr != row                          { strip[mr][col] = val }
-        if hReflect && vReflect && mr != row && mc != col { strip[mr][mc]  = val }
+        if acrossVerticalAxis && mc != col              { strip[row][mc] = val }
+        if acrossHorizontalAxis && mr != row            { strip[mr][col] = val }
+        if acrossVerticalAxis && acrossHorizontalAxis && mr != row && mc != col { strip[mr][mc]  = val }
     }
 }

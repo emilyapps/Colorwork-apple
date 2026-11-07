@@ -9,14 +9,23 @@ struct ControlPanelView: View {
     var body: some View {
         @Bindable var doc = doc
         Form {
+            Section("Pattern Kind") {
+                Picker("Pattern Kind", selection: Binding(get: { doc.kind }, set: { doc.setKind($0) })) {
+                    Text("Tile").tag(PatternKind.tile)
+                    Text("Wedge").tag(PatternKind.wedge)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
             Section("Symmetry") {
                 HStack {
                     Text("Rotation")
                     Spacer()
                     Picker("Rotation", selection: rotationBinding) {
-                        Text("1×").tag(1)
-                        Text("2×").tag(2)
-                        Text("4×").tag(4)
+                        ForEach([1, 2, 4].filter { r in allowed.contains { $0.rotationFactor == r } }, id: \.self) {
+                            Text("\($0)×").tag($0)
+                        }
                     }
                     .pickerStyle(.segmented)
                     .labelsHidden()
@@ -28,8 +37,12 @@ struct ControlPanelView: View {
                         Spacer()
                         Picker("Reflect", selection: axisBinding) {
                             Text("None").tag(SymmetryGroup.ReflectionAxis.none)
-                            Text("V").tag(SymmetryGroup.ReflectionAxis.vertical)
-                            Text("H").tag(SymmetryGroup.ReflectionAxis.horizontal)
+                            if allowed.contains(.d1) {
+                                Text("V").tag(SymmetryGroup.ReflectionAxis.vertical)
+                            }
+                            if allowed.contains(.d1h) {
+                                Text("H").tag(SymmetryGroup.ReflectionAxis.horizontal)
+                            }
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
@@ -37,10 +50,20 @@ struct ControlPanelView: View {
                     }
                 } else {
                     Toggle("Reflect", isOn: reflectBinding)
+                        .disabled(!allowed.contains(
+                            .from(rotation: doc.symmetryGroup.rotationFactor, reflection: !doc.symmetryGroup.hasReflection)))
                 }
                 Text(doc.symmetryGroup.displayName)
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
+                if !doc.limitingStitches.isEmpty {
+                    Text("Rotation and horizontal-axis reflection are unavailable: "
+                         + doc.limitingStitches.map(\.displayName).joined(separator: ", ")
+                         + (doc.limitingStitches.count == 1 ? " has" : " have")
+                         + " no matching stitch under them yet.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Section("Grid Size") {
@@ -50,7 +73,7 @@ struct ControlPanelView: View {
                         set: { doc.H = $0; doc.W = $0 }))
                 } else {
                     IntSliderView(label: "W", range: 2...25, value: $doc.W)
-                    IntSliderView(label: "H", range: 2...25, value: $doc.H)
+                    IntSliderView(label: "H", range: 2...50, value: $doc.H)
                 }
             }
 
@@ -70,6 +93,8 @@ struct ControlPanelView: View {
         }
         .formStyle(.grouped)
     }
+
+    private var allowed: Set<SymmetryGroup> { doc.allowedSymmetryGroups }
 
     private var rotationBinding: Binding<Int> {
         Binding(
