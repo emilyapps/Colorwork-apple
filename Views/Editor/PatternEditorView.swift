@@ -75,32 +75,37 @@ struct PatternEditorView: View {
 
             Divider()
 
-            StitchToolPicker()
+            StitchBar()
                 .padding(.horizontal)
-                .padding(.top, 6)
+                .padding(.vertical, 2)
 
-            HStack {
-                Button("Generate", systemImage: "wand.and.stars")                         { doc.generate() }
-                Spacer()
-                Button("Clear", systemImage: "trash")                                  { doc.clear() }
-                Spacer()
-                Button("Settings", systemImage: "slider.horizontal.3")                    { showControls.toggle() }
-                Spacer()
-                Button("Colors", systemImage: "paintpalette")                           { showColors.toggle() }
-                Spacer()
-                Button("Tiling", systemImage: "square.grid.3x3")                        { showTiling.toggle() }
-                Spacer()
-                Button("Fit to Screen", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
-                Spacer()
-                Button("Undo", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
-                    .disabled(!doc.canUndo)
+            Divider()
+
+            // Bottom toolbar: frequent sheets plus Generate; rare actions in the ⋯ menu.
+            HStack(spacing: 0) {
+                toolbarButton("Generate", "wand.and.stars") { doc.generate() }
+                toolbarButton("Settings", "slider.horizontal.3") { showControls.toggle() }
+                toolbarButton("Colors", "paintpalette") { showColors.toggle() }
+                toolbarButton("Tiling", "square.grid.3x3") { showTiling.toggle() }
+                Menu {
+                    Button("Fit to Screen", systemImage: "arrow.up.left.and.arrow.down.right") {
+                        doc.fitCellSize()
+                    }
+                    Button("Clear", systemImage: "trash", role: .destructive) { doc.clear() }
+                } label: {
+                    toolbarLabel("More", "ellipsis.circle")
+                }
             }
-            .labelStyle(.iconOnly)
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
+            ToolbarItemGroup(placement: .topBarLeading) {
+                Button("Undo", systemImage: "arrow.uturn.backward") { doc.undo() }
+                    .disabled(!doc.canUndo)
+                Button("Redo", systemImage: "arrow.uturn.forward") { doc.redo() }
+                    .disabled(!doc.canRedo)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
                 Button("Export", systemImage: "square.and.arrow.up") { export() }
             }
         }
@@ -124,6 +129,23 @@ struct PatternEditorView: View {
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
+    }
+    #endif
+
+    #if os(iOS)
+    private func toolbarButton(_ title: String, _ icon: String,
+                               action: @escaping () -> Void) -> some View {
+        Button(action: action) { toolbarLabel(title, icon) }
+    }
+
+    /// Icon over a short caption, 44pt+ tall, scaling with Dynamic Type.
+    private func toolbarLabel(_ title: String, _ icon: String) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: icon).font(.title3)
+            Text(title).font(.caption2)
+        }
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .contentShape(Rectangle())
     }
     #endif
 

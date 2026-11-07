@@ -10,11 +10,6 @@ struct WindowRootView: View {
     @State private var undoManager = UndoManager()
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase)   private var scenePhase
-    @AppStorage("lastProjectID") private var lastProjectID = ""
-
-    /// Projects open in some window, so a second Mac window doesn't reopen the same one.
-    @MainActor private static var openProjectIDs: Set<UUID> = []
-
     var body: some View {
         ContentView()
             .environment(document)
@@ -24,13 +19,9 @@ struct WindowRootView: View {
             }
             .task {
                 let store = PatternStore(context: modelContext)
-                let last = UUID(uuidString: lastProjectID).flatMap {
-                    Self.openProjectIDs.contains($0) ? nil : $0
-                }
-                store.openInitialProject(lastID: last, into: document)
+                store.openInitialProject(into: document)
                 // Autosave: write the open Project about once a second when it changed.
                 while !Task.isCancelled {
-                    track(document.currentProjectID)
                     store.autosave(document)
                     try? await Task.sleep(for: .seconds(1))
                 }
@@ -38,21 +29,10 @@ struct WindowRootView: View {
             .onChange(of: scenePhase) { _, phase in
                 if phase != .active { PatternStore(context: modelContext).autosave(document) }
             }
-            .onDisappear {
-                PatternStore(context: modelContext).autosave(document)
-                if let id = document.currentProjectID { Self.openProjectIDs.remove(id) }
-            }
+            .onDisappear { PatternStore(context: modelContext).autosave(document) }
             #if os(macOS)
             .focusedSceneValue(\.patternDocument, document)
             #endif
-    }
-
-    @State private var trackedID: UUID?
-    private func track(_ id: UUID?) {
-        guard id != trackedID else { return }
-        if let old = trackedID { Self.openProjectIDs.remove(old) }
-        if let id { Self.openProjectIDs.insert(id); lastProjectID = id.uuidString }
-        trackedID = id
     }
 }
 
@@ -202,8 +182,13 @@ struct LibraryView: View {
 
     @Query(sort: [SortDescriptor(\SDPattern.sortOrder),
                   SortDescriptor(\SDPattern.createdAt, order: .reverse)]) var patterns: [SDPattern]
-    @Query(sort: [SortDescriptor(\SDProject.sortOrder),
+    @Query(sort: [SortDescriptor(\SDProject.modifiedAt, order: .reverse),
                   SortDescriptor(\SDProject.createdAt, order: .reverse)]) var projects: [SDProject]
+    @State private var selectedProjects = Set<UUID>()
+    @State private var confirmBulkDelete = false
+    #if os(iOS)
+    @State private var editMode: EditMode = .inactive
+    #endif
 
     @State private var selectedTab = 0
 
@@ -226,9 +211,19 @@ struct LibraryView: View {
             }
         }
         .navigationTitle("Library")
+        #if os(iOS)
+        .environment(\.editMode, $editMode)
+        .onChange(of: editMode) { _, mode in if !mode.isEditing { selectedProjects = [] } }
+        .onChange(of: selectedTab) { _, _ in editMode = .inactive }
+        #endif
         .toolbar {
             #if os(iOS)
-            ToolbarItem(placement: .topBarLeading) { EditButton() }
+            ToolbarItem(placement: .topBarLeading) {
+                Button(editMode.isEditing ? "Done" : "Edit") {
+                    withAnimation { editMode = editMode.isEditing ? .inactive : .active }
+                }
+                .fontWeight(editMode.isEditing ? .semibold : .regular)
+            }
             #endif
             if selectedTab == 1 {
                 ToolbarItem(placement: .primaryAction) {
@@ -296,7 +291,7 @@ struct LibraryView: View {
 
     private var projectList: some View {
         VStack(spacing: 0) {
-            List {
+            List(selection: $selectedProjects) {
                 ForEach(projects) { p in
                     Button {
                         PatternStore(context: modelContext).openProject(p, into: doc)
@@ -306,7 +301,7 @@ struct LibraryView: View {
                             thumbView(p.thumbnailData, size: 44)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(p.name).font(.headline)
-                                Text(dateString(p.createdAt))
+                                Text("Edited " + dateString(p.modifiedAt ?? p.createdAt))
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
@@ -328,11 +323,10 @@ struct LibraryView: View {
                         }
                     }
                 }
-                .onDelete { idxs in
-                    if let i = idxs.first { projectPendingDelete = projects[i] }
-                }
-                .onMove(perform: moveProjects)
             }
+            #if os(iOS)
+            if editMode.isEditing { bulkBar }
+            #endif
 
         }
         .confirmationDialog(
@@ -354,6 +348,41 @@ struct LibraryView: View {
             }
         }
     }
+
+    #if os(iOS)
+    /// Edit-mode bar: select all, delete the selected Projects (Files/Photos style).
+    private var bulkBar: some View {
+        HStack {
+            Button(selectedProjects.count == projects.count ? "Deselect All" : "Select All") {
+                selectedProjects = selectedProjects.count == projects.count
+                    ? [] : Set(projects.map(\.id))
+            }
+            Spacer()
+            Button("Delete", role: .destructive) { confirmBulkDelete = true }
+                .disabled(selectedProjects.isEmpty)
+        }
+        .padding()
+        .background(.bar)
+        .confirmationDialog(
+            selectedProjects.count == 1 ? "Delete 1 project?" : "Delete \(selectedProjects.count) projects?",
+            isPresented: $confirmBulkDelete, titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) { deleteSelected() }
+        } message: {
+            Text("This can't be undone. Patterns are not affected.")
+        }
+    }
+
+    private func deleteSelected() {
+        let doomed = projects.filter { selectedProjects.contains($0.id) }
+        let store = PatternStore(context: modelContext)
+        let openDeleted = doomed.contains { $0.id == doc.currentProjectID }
+        store.deleteProjects(doomed)
+        selectedProjects = []
+        editMode = .inactive
+        if openDeleted { doc.currentProjectID = nil; store.newProject(into: doc) }
+    }
+    #endif
 
     @ViewBuilder
     private func thumbView(_ data: Data?, size: CGFloat) -> some View {
@@ -380,13 +409,6 @@ struct LibraryView: View {
 
     private func movePatterns(from offsets: IndexSet, to destination: Int) {
         var reordered = patterns
-        reordered.move(fromOffsets: offsets, toOffset: destination)
-        for (idx, p) in reordered.enumerated() { p.sortOrder = idx }
-        try? modelContext.save()
-    }
-
-    private func moveProjects(from offsets: IndexSet, to destination: Int) {
-        var reordered = projects
         reordered.move(fromOffsets: offsets, toOffset: destination)
         for (idx, p) in reordered.enumerated() { p.sortOrder = idx }
         try? modelContext.save()

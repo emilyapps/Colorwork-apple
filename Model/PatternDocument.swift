@@ -165,6 +165,9 @@ final class PatternDocument {
     var isDirty:            Bool   = false
     /// The Project this document autosaves into (nil until one is opened or created).
     var currentProjectID:   UUID?
+    /// For a new Project not yet saved: its content when it started, and its starting name.
+    var pendingBaseline:    Data?
+    var pendingName:        String = ""
 
     // MARK: - Undo
     var undoManager: UndoManager?
@@ -180,6 +183,13 @@ final class PatternDocument {
             doc.canRedo = doc.undoManager?.canRedo ?? false
         }
         undoManager?.setActionName(name)
+        canUndo = undoManager?.canUndo ?? false
+        canRedo = undoManager?.canRedo ?? false
+    }
+
+    func undo() { undoManager?.undo(); refreshUndoState() }
+    func redo() { undoManager?.redo(); refreshUndoState() }
+    private func refreshUndoState() {
         canUndo = undoManager?.canUndo ?? false
         canRedo = undoManager?.canRedo ?? false
     }

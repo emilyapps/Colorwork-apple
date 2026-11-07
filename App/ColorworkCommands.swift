@@ -51,10 +51,10 @@ struct ColorworkCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .undoRedo) {
-            Button("Undo") { doc?.undoManager?.undo() }
+            Button("Undo") { doc?.undo() }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(!(doc?.canUndo ?? false))
-            Button("Redo") { doc?.undoManager?.redo() }
+            Button("Redo") { doc?.redo() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(!(doc?.canRedo ?? false))
         }

@@ -13,7 +13,7 @@ Opening a Pattern starts a new Project; a Pattern changes only through Save as P
 
 **Project**:
 A Pattern plus how it is repeated and shown: border strips, Planar or Radial Repeat settings (including a Wedge's N), and view settings.
-The open Project autosaves; it is the working document.
+The open Project autosaves; it is the working document. A new Project is saved only once it is changed.
 _Avoid_: Tiled pattern
 
 **Pattern Kind**:

@@ -105,6 +105,7 @@ final class PatternStore {
     private func write(_ doc: PatternDocument, into project: SDProject, data: Data? = nil) throws {
         project.data = try data ?? encoder.encode(PatternSnapshot(from: doc))
         project.name = doc.currentPatternName
+        project.modifiedAt = Date()
         project.thumbnailData = Self.makeThumbnail(
             grid: doc.grid, H: doc.H, W: doc.W,
             fillHex: doc.fillColor.hex, bgHex: doc.bgColor.hex,
@@ -137,7 +138,7 @@ final class PatternStore {
 
     func listProjects() throws -> [SDProject] {
         let descriptor = FetchDescriptor<SDProject>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)])
+            sortBy: [SortDescriptor(\.modifiedAt, order: .reverse)])
         return try context.fetch(descriptor)
     }
 
@@ -194,50 +195,73 @@ final class PatternStore {
 // MARK: - Project session (autosave model)
 // The open Project is the working document and autosaves; opening a Pattern starts
 // a new Project from it; a Pattern changes only through Save as Pattern.
+// A new Project is not saved until it is changed, so unedited starts leave no clutter.
 
 extension PatternStore {
 
-    /// Saves the open Project if it changed. Recreates nothing if it was deleted.
-    func autosave(_ doc: PatternDocument) {
-        guard let id = doc.currentProjectID, let project = project(id: id) else { return }
-        try? updateProject(project, from: doc)
+    /// What counts as a change: the chart and its settings, not view-only state like zoom.
+    func contentSignature(_ doc: PatternDocument) -> Data? {
+        var snap = PatternSnapshot(from: doc)
+        snap.cellSize = 0
+        let e = JSONEncoder()
+        e.outputFormatting = .sortedKeys
+        return try? e.encode(snap)
     }
 
-    /// At launch: reopen the last Project, or start a new Untitled one.
-    func openInitialProject(lastID: UUID?, into doc: PatternDocument) {
-        if let id = lastID, let p = project(id: id) {
-            try? loadProject(p, into: doc)
-            doc.currentProjectID = p.id
-        } else {
-            doc.currentPatternName = uniqueProjectName()
+    /// Saves the open Project if it changed. A pending (never-saved) Project is created
+    /// the first time it differs from how it started.
+    func autosave(_ doc: PatternDocument) {
+        if let id = doc.currentProjectID {
+            guard let project = project(id: id) else { return }
+            try? updateProject(project, from: doc)
+        } else if let base = doc.pendingBaseline,
+                  contentSignature(doc) != base || doc.currentPatternName != doc.pendingName {
             doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
+            doc.pendingBaseline = nil
         }
+    }
+
+    /// Marks the document as a new, unsaved Project.
+    private func beginPending(_ doc: PatternDocument) {
+        doc.currentProjectID = nil
+        doc.currentPatternName = uniqueProjectName()
+        doc.pendingName = doc.currentPatternName
+        doc.pendingBaseline = contentSignature(doc)
         doc.resetUndo()
+    }
+
+    /// At launch: a fresh random chart, saved only once it is changed.
+    func openInitialProject(into doc: PatternDocument) {
+        // Older Projects have no edit date; use when they were made so sorting works.
+        if let undated = try? context.fetch(FetchDescriptor<SDProject>(
+            predicate: #Predicate { $0.modifiedAt == nil })), !undated.isEmpty {
+            for p in undated { p.modifiedAt = p.createdAt }
+            try? context.save()
+        }
+        beginPending(doc)
     }
 
     func openProject(_ project: SDProject, into doc: PatternDocument) {
         autosave(doc)
         try? loadProject(project, into: doc)
         doc.currentProjectID = project.id
+        doc.pendingBaseline = nil
         doc.resetUndo()
     }
 
-    /// Opening a Pattern starts a new Project from it; the Pattern is not changed.
+    /// Opening a Pattern starts a new Untitled Project from it; the Pattern is not changed.
     func startProject(from pattern: SDPattern, into doc: PatternDocument) {
         autosave(doc)
         loadPattern(pattern, into: doc)
-        doc.currentPatternName = uniqueProjectName(pattern.name)
-        doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
-        doc.resetUndo()
+        beginPending(doc)
     }
 
+    /// New Project starts from a blank grid.
     func newProject(into doc: PatternDocument) {
         autosave(doc)
         PatternSnapshot(from: PatternDocument()).apply(to: doc)
         doc.clear()
-        doc.currentPatternName = uniqueProjectName()
-        doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
-        doc.resetUndo()
+        beginPending(doc)
     }
 
     /// Copies the open Project and switches to the copy.
@@ -245,12 +269,14 @@ extension PatternStore {
         autosave(doc)
         doc.currentPatternName = uniqueProjectName(doc.currentPatternName + " copy")
         doc.currentProjectID = (try? saveProject(from: doc, name: doc.currentPatternName))?.id
+        doc.pendingBaseline = nil
         doc.resetUndo()
     }
 
     func duplicate(_ project: SDProject) {
         let copy = SDProject(name: uniqueProjectName(project.name + " copy"), data: project.data)
         copy.thumbnailData = project.thumbnailData
+        copy.modifiedAt = Date()
         context.insert(copy)
         try? context.save()
     }
@@ -260,6 +286,11 @@ extension PatternStore {
         guard !trimmed.isEmpty else { return }
         doc.currentPatternName = trimmed
         autosave(doc)
+    }
+
+    func deleteProjects(_ projects: [SDProject]) {
+        for p in projects { context.delete(p) }
+        try? context.save()
     }
 
     /// Save as Pattern; replaces an existing Pattern of the same name, keeping its place in the list.

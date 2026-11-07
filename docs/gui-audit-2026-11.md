@@ -7,8 +7,9 @@ Audit of the iPhone app against Apple's Human Interface Guidelines, decided with
 1. **Accessibility labels.** Every icon-only button gets a spoken name.
 2. **Saving and file access** (Pages/Freeform-style documents):
    - The open **Project autosaves**. No Save button.
-   - At launch the app opens the last Project; with none, a new Untitled Project. New Projects are named "Untitled", "Untitled 2", …
-   - Tapping a **Pattern** in the Library starts a **new Project** from it (template behaviour). The Pattern is never changed.
+   - At launch the app opens a **fresh random chart** ("Untitled"). A new Project is **saved only once it is changed** (painting, settings, Generate, rename), so unedited starts leave no clutter. New Projects are named "Untitled", "Untitled 2", … (revised 2026-11-07; first version reopened the last Project).
+   - Tapping a **Pattern** in the Library starts a **new Untitled Project** from it (template behaviour). The Pattern is never changed.
+   - Projects are listed by **last edited**. Library **Edit** mode selects several Projects (Select All) and deletes them after one confirmation.
    - Tapping a **Project** in the Library opens it; edits go into it.
    - **Title menu** (tap the title): New Project, Rename, Duplicate, Save as Pattern…, Export…. Save as Pattern with an existing name asks "Replace existing pattern?".
    - Library: "+" in Projects for New Project; long-press → Duplicate; Patterns footer "Opening a pattern starts a new project."; the Name field and Save Pattern button are removed; rows use normal text color.
