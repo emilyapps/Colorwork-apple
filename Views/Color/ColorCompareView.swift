@@ -28,28 +28,41 @@ struct ColorCompareView: View {
                     .cornerRadius(4)
             }
 
-            // Harmony swatches (applied to bg color)
             // Editing the fill → suggest backgrounds to go with it, and vice versa.
             Text(editingFill ? "Backgrounds to go with this fill — tap to use"
                              : "Fills to go with this background — tap to use")
                 .font(.subheadline).foregroundStyle(.secondary)
                 .padding(.top, 6)
-            let harmonies = ColorMath.harmonyColors(fill: editingFill ? doc.fillColor.hex : doc.bgColor.hex)
-            LazyVGrid(columns: Array(repeating: .init(.flexible()), count: 7), spacing: 4) {
-                ForEach(Array(harmonies.enumerated()), id: \.offset) { _, hex in
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(ColorMath.color(from: hex))
-                        .frame(height: 24)
-                        .overlay(RoundedRectangle(cornerRadius: 4).stroke(.secondary.opacity(0.3), lineWidth: 0.5))
-                        .onTapGesture {
-                            (editingFill ? doc.bgColor : doc.fillColor).setHex(hex)
-                            doc.rebuildDescriptors()
-                        }
-                        .accessibilityLabel(editingFill ? "Use as background" : "Use as fill")
-                        .accessibilityAddTraits(.isButton)
+            let base = editingFill ? doc.fillColor.hex : doc.bgColor.hex   // the colour being edited
+            let harmonies = ColorMath.harmonies(for: base)
+            LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 6), count: 4),
+                      alignment: .leading, spacing: 10) {
+                ForEach(Array(harmonies.enumerated()), id: \.offset) { _, harmony in
+                    suggestion(harmony, against: base)
                 }
             }
         }
+    }
+
+    private func suggestion(_ harmony: ColorMath.Harmony, against other: String) -> some View {
+        let ratio = ColorMath.contrastRatio(harmony.hex, other)
+        return VStack(alignment: .leading, spacing: 3) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(ColorMath.color(from: harmony.hex))
+                .frame(height: 36)
+                .overlay(RoundedRectangle(cornerRadius: 6).stroke(.secondary.opacity(0.3), lineWidth: 0.5))
+            Text(harmony.name).font(.caption).lineLimit(1).minimumScaleFactor(0.7)
+            Text(String(format: "%.1f:1", ratio)).font(.caption2).foregroundStyle(.secondary)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            (editingFill ? doc.bgColor : doc.fillColor).setHex(harmony.hex)
+            doc.rebuildDescriptors()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(harmony.name), contrast \(String(format: "%.1f", ratio)) to 1")
+        .accessibilityHint(editingFill ? "Uses it as the background" : "Uses it as the fill")
+        .accessibilityAddTraits(.isButton)
     }
 
     // MARK: - Gradient strip (60 interpolated steps)

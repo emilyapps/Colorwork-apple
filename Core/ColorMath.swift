@@ -119,15 +119,54 @@ enum ColorMath {
 
     /// 7 harmony colours: complement, 2× split, 2× analogous, 2× triadic.
     /// Port of pattern_core.py:_harmony_colors
-    static func harmonyColors(fill: String) -> [String] {
-        guard let (r, g, b) = hexToRGB(fill) else { return Array(repeating: "#888888", count: 7) }
+    /// A suggested partner color and the color-wheel relationship it comes from.
+    struct Harmony: Equatable {
+        let name: String   // "Complementary", "Split", "Analogous", "Triadic"
+        let hex: String
+    }
+
+    /// Partner colors for `base`, for the *other* slot (fill ↔ background).
+    ///
+    /// - Hues: complementary (180°), split-complementary (±150°), analogous (±30°),
+    ///   triadic (±120°).
+    /// - Muted, yarn-like saturation (18–45%), so nothing comes out garish.
+    /// - Lightness is pushed away from `base` just far enough for at least AA contrast
+    ///   (4.5:1) — readable as colorwork without jumping to black or white. If AA
+    ///   can't be reached in either direction, the most contrasting lightness is used.
+    static func harmonies(for base: String) -> [Harmony] {
+        guard let (r, g, b) = hexToRGB(base) else { return [] }
         let (h, s, l) = rgbToHSL(r: r, g: g, b: b)
-        let sHarm = max(0.30, s * 0.85)
-        let lHarm = l > 0.55 ? max(0.10, l - 0.50) : min(0.92, l + 0.45)
-        return [180, 150, 210, 30, 330, 120, 240].map { off in
-            hslToHex(h: (h + Double(off)).truncatingRemainder(dividingBy: 360),
-                     s: sHarm, l: lHarm)
+        let sMuted = min(0.45, max(0.18, s * 0.7))
+        let slots: [(String, Double)] = [
+            ("Complementary", 180),
+            ("Split", 150), ("Split", 210),
+            ("Analogous", 30), ("Analogous", 330),
+            ("Triadic", 120), ("Triadic", 240),
+        ]
+        return slots.map { name, offset in
+            let hue = (h + offset).truncatingRemainder(dividingBy: 360)
+            return Harmony(name: name, hex: contrastingLightness(hue: hue, s: sMuted, from: l, against: base))
         }
+    }
+
+    /// The first lightness, stepping away from `start`, whose contrast with `against`
+    /// reaches 4.5:1; tries the more promising direction first.
+    private static func contrastingLightness(hue: Double, s: Double, from start: Double,
+                                             against: String) -> String {
+        let target = 4.5
+        let darkerFirst = relativeLuminance(against) > 0.18
+        var best = (hex: hslToHex(h: hue, s: s, l: start), ratio: 0.0)
+        for goDarker in [darkerFirst, !darkerFirst] {
+            var l = min(0.96, max(0.04, start))   // pure black or white start just inside the range
+            while l >= 0.04 && l <= 0.96 {
+                let hex = hslToHex(h: hue, s: s, l: l)
+                let ratio = contrastRatio(hex, against)
+                if ratio >= target { return hex }
+                if ratio > best.ratio { best = (hex, ratio) }
+                l += goDarker ? -0.01 : 0.01
+            }
+        }
+        return best.hex
     }
 
     // MARK: SwiftUI convenience
