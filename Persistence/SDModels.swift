@@ -58,6 +58,7 @@ final class SDProject {
     var createdAt: Date   = Date()
     var sortOrder: Int    = 0
     var data:      Data   = Data()   // JSONEncoder(PatternSnapshot)
+    var modifiedAt: Date?  = nil      // last autosave; nil for Projects saved before autosave
 
     var thumbnailData: Data? = nil
 

@@ -14,7 +14,11 @@ private struct SavePatternActionKey: FocusedValueKey {
     typealias Value = () -> Void
 }
 
-private struct SaveProjectActionKey: FocusedValueKey {
+private struct NewProjectActionKey: FocusedValueKey {
+    typealias Value = () -> Void
+}
+
+private struct DuplicateProjectActionKey: FocusedValueKey {
     typealias Value = () -> Void
 }
 
@@ -27,9 +31,13 @@ extension FocusedValues {
         get { self[SavePatternActionKey.self] }
         set { self[SavePatternActionKey.self] = newValue }
     }
-    var saveProjectAction: (() -> Void)? {
-        get { self[SaveProjectActionKey.self] }
-        set { self[SaveProjectActionKey.self] = newValue }
+    var newProjectAction: (() -> Void)? {
+        get { self[NewProjectActionKey.self] }
+        set { self[NewProjectActionKey.self] = newValue }
+    }
+    var duplicateProjectAction: (() -> Void)? {
+        get { self[DuplicateProjectActionKey.self] }
+        set { self[DuplicateProjectActionKey.self] = newValue }
     }
 }
 
@@ -38,14 +46,15 @@ extension FocusedValues {
 struct ColorworkCommands: Commands {
     @FocusedValue(\.patternDocument)   var doc
     @FocusedValue(\.savePatternAction) var savePattern
-    @FocusedValue(\.saveProjectAction) var saveProject
+    @FocusedValue(\.newProjectAction)       var newProject
+    @FocusedValue(\.duplicateProjectAction) var duplicateProject
 
     var body: some Commands {
         CommandGroup(replacing: .undoRedo) {
-            Button("Undo") { doc?.undoManager?.undo() }
+            Button("Undo") { doc?.undo() }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(!(doc?.canUndo ?? false))
-            Button("Redo") { doc?.undoManager?.redo() }
+            Button("Redo") { doc?.redo() }
                 .keyboardShortcut("z", modifiers: [.command, .shift])
                 .disabled(!(doc?.canRedo ?? false))
         }
@@ -58,9 +67,12 @@ struct ColorworkCommands: Commands {
         }
 
         CommandGroup(after: .saveItem) {
-            Button("Save Pattern\u{2026}") { savePattern?() }
+            Button("New Project") { newProject?() }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+            Button("Duplicate") { duplicateProject?() }
+                .keyboardShortcut("d", modifiers: [.command, .shift])
+            Button("Save as Pattern\u{2026}") { savePattern?() }
                 .keyboardShortcut("s", modifiers: .command)
-            Button("Save Project\u{2026}") { saveProject?() }
             Divider()
             Button("Export\u{2026}") { if let d = doc { ExportPanel.show(doc: d) } }
                 .keyboardShortcut("e", modifiers: .command)

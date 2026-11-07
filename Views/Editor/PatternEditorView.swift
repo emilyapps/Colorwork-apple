@@ -7,6 +7,7 @@ import UniformTypeIdentifiers
 
 struct PatternEditorView: View {
     @Environment(PatternDocument.self) var doc
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var showControls     = false
     @State private var showColors       = false
     @State private var showTiling       = false
@@ -20,6 +21,7 @@ struct PatternEditorView: View {
             iphoneLayout
             #endif
         }
+        .modifier(ProjectCommands(export: export))
     }
 
     // MARK: - macOS: sidebar + pattern + tiling
@@ -35,7 +37,7 @@ struct PatternEditorView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text("Pattern")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.footnote.weight(.semibold))
                         StitchToolPicker()
                     }
                     .padding([.top, .leading], 8)
@@ -46,7 +48,7 @@ struct PatternEditorView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(doc.kind == .tile ? "Tiling Preview"
                          : doc.wedgeView == .chart ? "Chart View" : "Circular View")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.footnote.weight(.semibold))
                         .padding([.top, .leading], 8)
                     if doc.kind == .wedge { WedgePreviewView() } else { TilingPreviewView() }
                 }
@@ -57,7 +59,7 @@ struct PatternEditorView: View {
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Generate") { doc.generate() }
                 Button("Clear")    { doc.clear() }
-                Button("", systemImage: "arrow.up.left.and.arrow.down.right") { doc.fitCellSize() }
+                Button("Fit to Screen", systemImage: "arrow.up.left.and.arrow.down.right") { doc.fitCellSize() }
             }
         }
     }
@@ -74,32 +76,38 @@ struct PatternEditorView: View {
 
             Divider()
 
-            StitchToolPicker()
+            StitchBar()
                 .padding(.horizontal)
-                .padding(.top, 6)
+                .padding(.vertical, 2)
 
-            HStack {
-                Button("", systemImage: "wand.and.stars")                         { doc.generate() }
-                Spacer()
-                Button("", systemImage: "trash")                                  { doc.clear() }
-                Spacer()
-                Button("", systemImage: "slider.horizontal.3")                    { showControls.toggle() }
-                Spacer()
-                Button("", systemImage: "paintpalette")                           { showColors.toggle() }
-                Spacer()
-                Button("", systemImage: "square.grid.3x3")                        { showTiling.toggle() }
-                Spacer()
-                Button("", systemImage: "arrow.up.left.and.arrow.down.right")     { doc.fitCellSize() }
-                Spacer()
-                Button("", systemImage: "arrow.uturn.backward")                   { doc.undoManager?.undo() }
-                    .disabled(!doc.canUndo)
+            Divider()
+
+            // Bottom toolbar: frequent sheets plus Generate; rare actions in the ⋯ menu.
+            HStack(spacing: 0) {
+                toolbarButton("Generate", "wand.and.stars") { doc.generate() }
+                toolbarButton("Settings", "slider.horizontal.3") { showControls.toggle() }
+                toolbarButton("Colors", "paintpalette") { showColors.toggle() }
+                toolbarButton("Tiling", "square.grid.3x3") { showTiling.toggle() }
+                Menu {
+                    Button("Fit to Screen", systemImage: "arrow.up.left.and.arrow.down.right") {
+                        doc.fitCellSize()
+                    }
+                    Button("Clear", systemImage: "trash", role: .destructive) { doc.clear() }
+                } label: {
+                    toolbarLabel("More", "ellipsis.circle")
+                }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 4)
         }
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button("", systemImage: "square.and.arrow.up") { export() }
+            ToolbarItemGroup(placement: .topBarLeading) {
+                Button("Undo", systemImage: "arrow.uturn.backward") { doc.undo() }
+                    .disabled(!doc.canUndo)
+                Button("Redo", systemImage: "arrow.uturn.forward") { doc.redo() }
+                    .disabled(!doc.canRedo)
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Export", systemImage: "square.and.arrow.up") { export() }
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {
@@ -108,7 +116,16 @@ struct PatternEditorView: View {
             Button("SVG")  { shareFile(format: .svg) }
         }
         .sheet(isPresented: $showControls) {
-            ControlPanelView()
+            NavigationStack {
+                ControlPanelView()
+                    .navigationTitle("Settings")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showControls = false }
+                        }
+                    }
+            }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
@@ -121,6 +138,33 @@ struct PatternEditorView: View {
             TilingSheetView()
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+    }
+    #endif
+
+    #if os(iOS)
+    private func toolbarButton(_ title: String, _ icon: String,
+                               action: @escaping () -> Void) -> some View {
+        Button(action: action) { toolbarLabel(title, icon) }
+    }
+
+    /// Icon over a short caption, 44pt+ tall, scaling with Dynamic Type.
+    private func toolbarLabel(_ title: String, _ icon: String) -> some View {
+        // Like system toolbars: at accessibility sizes the caption is dropped
+        // and a long press shows the name in the Large Content Viewer.
+        VStack(spacing: 2) {
+            Image(systemName: icon).font(.title3)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            if !typeSize.isAccessibilitySize {
+                Text(title).font(.caption2).lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 48)
+        .contentShape(Rectangle())
+        .accessibilityLabel(title)
+        .accessibilityShowsLargeContentViewer {
+            Image(systemName: icon)
+            Text(title)
         }
     }
     #endif

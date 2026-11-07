@@ -19,7 +19,7 @@ struct TilingPreviewView: View {
                         .font(.largeTitle)
                         .foregroundStyle(.secondary)
                     Text("Enable H or V repeat\nin the Tiling tab")
-                        .font(.system(size: 12))
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -37,6 +37,7 @@ struct TilingPreviewView: View {
                     width:  CGFloat(doc.tilingCols) * cs,
                     height: CGFloat(doc.tilingRows) * cs)
                 .padding(margin)
+                .frame(width: geo.size.width, height: geo.size.height)   // centre it
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

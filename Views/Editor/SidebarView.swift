@@ -68,7 +68,7 @@ struct ColorsSidebarView: View {
                         .overlay(RoundedRectangle(cornerRadius: 6).stroke(.secondary.opacity(0.3), lineWidth: 1))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(activeColor.hex.uppercased())
-                            .font(.system(size: 12, design: .monospaced))
+                            .font(.caption.monospaced())
                         hexField
                     }
                     Spacer()
@@ -115,7 +115,7 @@ struct ColorsSidebarView: View {
 
     private var hexField: some View {
         HStack(spacing: 2) {
-            Text("#").font(.system(size: 12)).foregroundStyle(.secondary)
+            Text("#").font(.caption).foregroundStyle(.secondary)
             TextField("rrggbb", text: Binding(
                 get: { String(activeColor.hex.dropFirst()) },
                 set: { v in
@@ -125,7 +125,7 @@ struct ColorsSidebarView: View {
                         doc.rebuildDescriptors()
                     }
                 }))
-            .font(.system(size: 12, design: .monospaced))
+            .font(.caption.monospaced())
             .frame(width: 70)
         }
     }
@@ -219,7 +219,7 @@ struct SaveLoadSidebarView: View {
 
             VStack(spacing: 6) {
                 TextField("Name…", text: $saveName)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .textFieldStyle(.roundedBorder)
 
                 HStack(spacing: 6) {
@@ -238,7 +238,7 @@ struct SaveLoadSidebarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !statusMsg.isEmpty {
-                    Text(statusMsg).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(statusMsg).font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 8)
@@ -300,7 +300,7 @@ struct SaveLoadSidebarView: View {
 
             VStack(spacing: 6) {
                 TextField("Name…", text: $saveName)
-                    .font(.system(size: 12))
+                    .font(.caption)
                     .textFieldStyle(.roundedBorder)
 
                 HStack(spacing: 6) {
@@ -319,7 +319,7 @@ struct SaveLoadSidebarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 if !statusMsg.isEmpty {
-                    Text(statusMsg).font(.system(size: 10)).foregroundStyle(.secondary)
+                    Text(statusMsg).font(.caption2).foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, 8)
@@ -333,15 +333,15 @@ struct SaveLoadSidebarView: View {
         HStack(spacing: 8) {
             thumbView(p.thumbnailData, size: 36)
             VStack(alignment: .leading, spacing: 1) {
-                Text(p.name).font(.system(size: 12, weight: .semibold))
+                Text(p.name).font(.caption.weight(.semibold))
                 Text("\(p.gridW)×\(p.gridH) \(p.symmetryGroup.uppercased())")
-                    .font(.system(size: 10)).foregroundStyle(.secondary)
+                    .font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
             if p.id == lastLoadedPatternID {
                 Image(systemName: "checkmark")
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
             }
         }
     }
@@ -350,14 +350,14 @@ struct SaveLoadSidebarView: View {
         HStack(spacing: 8) {
             thumbView(p.thumbnailData, size: 36)
             VStack(alignment: .leading, spacing: 1) {
-                Text(p.name).font(.system(size: 12, weight: .semibold))
-                Text(shortDate(p.createdAt)).font(.system(size: 10)).foregroundStyle(.secondary)
+                Text(p.name).font(.caption.weight(.semibold))
+                Text(shortDate(p.createdAt)).font(.caption2).foregroundStyle(.secondary)
             }
             Spacer()
             if p.id == lastLoadedProjectID {
                 Image(systemName: "checkmark")
                     .foregroundColor(.accentColor)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.caption2.weight(.semibold))
             }
         }
     }

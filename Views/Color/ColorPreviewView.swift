@@ -18,6 +18,7 @@ struct ColorPreviewView: View {
                 .frame(width:  CGFloat(doc.W) * cs,
                        height: CGFloat(doc.H) * cs)
                 .padding(margin)
+                .frame(width: geo.size.width, height: geo.size.height)   // centre it
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

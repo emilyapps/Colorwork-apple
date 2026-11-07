@@ -58,6 +58,8 @@ struct GridCanvasView: View {
         .overlay(alignment: .top) { SymmetryNoticeBanner() }
         .onChange(of: doc.H) { _, _ in doc.fitCellSize() }
         .onChange(of: doc.W) { _, _ in doc.fitCellSize() }
+        .onChange(of: doc.kind) { _, _ in doc.fitCellSize() }
+        .onChange(of: doc.radialRepeat) { _, _ in doc.fitCellSize() }
     }
 
     // MARK: - Drawing

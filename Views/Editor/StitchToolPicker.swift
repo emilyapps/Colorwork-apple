@@ -68,3 +68,104 @@ struct StitchSymbolView: View {
         .frame(width: 20, height: 20)
     }
 }
+
+// MARK: - iPhone stitch bar
+// Brush, the 4 most recently used stitches, and More (a labelled grid of every stitch).
+// Every target is at least 44pt (Apple HIG).
+
+struct StitchBar: View {
+    @Environment(PatternDocument.self) var doc
+    @AppStorage("recentStitches") private var recentRaw = ""
+    @State private var showAll = false
+
+    private static let recentCount = 4
+
+    private var recents: [Stitch] {
+        var list = recentRaw.split(separator: ",").compactMap { Stitch(rawValue: String($0)) }
+        for s in Stitch.allCases where list.count < Self.recentCount && !list.contains(s) {
+            list.append(s)
+        }
+        return Array(list.prefix(Self.recentCount))
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            barButton(.color, label: "Paint colors") {
+                Image(systemName: "paintbrush.pointed").font(.title3)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            }
+            Divider().frame(height: 28)
+            ForEach(recents, id: \.self) { stitch in
+                barButton(.stitch(stitch), label: stitch.displayName) {
+                    StitchSymbolView(stitch: stitch)
+                }
+            }
+            Spacer(minLength: 0)
+            Button { showAll = true } label: {
+                Label("All", systemImage: "square.grid.2x2")
+                    .labelStyle(.titleAndIcon)
+                    .font(.subheadline)
+                    .lineLimit(1)
+                    .frame(minWidth: 44, minHeight: 44)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            }
+            .accessibilityLabel("All Stitches")
+            .accessibilityShowsLargeContentViewer {
+                Label("All Stitches", systemImage: "square.grid.2x2")
+            }
+            .popover(isPresented: $showAll) {
+                allStitches.presentationCompactAdaptation(.popover)
+            }
+        }
+    }
+
+    private var allStitches: some View {
+        ScrollView {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), alignment: .leading)], spacing: 4) {
+                ForEach(Stitch.allCases, id: \.self) { stitch in
+                    Button { choose(stitch); showAll = false } label: {
+                        HStack(spacing: 10) {
+                            StitchSymbolView(stitch: stitch)
+                            Text(stitch.displayName).foregroundStyle(.primary)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 8)
+                        .frame(minHeight: 44)
+                        .background(doc.paintTool == .stitch(stitch) ? Color.accentColor.opacity(0.2) : .clear,
+                                    in: RoundedRectangle(cornerRadius: 8))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(doc.paintTool == .stitch(stitch) ? .isSelected : [])
+                }
+            }
+            .padding()
+        }
+        .frame(minWidth: 320, idealHeight: 380)
+        .presentationDetents([.height(380)])
+    }
+
+    private func choose(_ stitch: Stitch) {
+        doc.paintTool = .stitch(stitch)
+        var list = recentRaw.split(separator: ",").map(String.init).filter { $0 != stitch.rawValue }
+        list.insert(stitch.rawValue, at: 0)
+        recentRaw = list.prefix(8).joined(separator: ",")
+    }
+
+    private func barButton<L: View>(_ tool: PatternDocument.PaintTool, label: String,
+                                    @ViewBuilder content: () -> L) -> some View {
+        let selected = doc.paintTool == tool
+        return Button {
+            if case .stitch(let s) = tool { choose(s) } else { doc.paintTool = tool }
+        } label: {
+            content()
+                .frame(width: 44, height: 44)
+                .background(selected ? Color.accentColor.opacity(0.25) : .clear,
+                            in: RoundedRectangle(cornerRadius: 8))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}

@@ -10,25 +10,42 @@ struct LabeledSliderView: View {
     let step:       Double
     @Binding var value: Double
 
+    @Environment(\.isEnabled) private var isEnabled
     @State  private var textInput:  String = ""
     @FocusState private var focused: Bool
 
     var body: some View {
         HStack(spacing: 6) {
             Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .frame(width: 44, alignment: .leading)
+                .font(Self.labelFont)
+                .frame(minWidth: Self.labelWidth, alignment: .leading)
+                .fixedSize()
             Text(formatMin)
-                .font(.system(size: 11))
+                .font(Self.rangeFont)
                 .foregroundStyle(.secondary)
+                #if os(iOS)
+                .frame(minWidth: 34, alignment: .trailing)
+                #endif
             Slider(value: $value, in: range, step: step)
+                #if os(macOS)
                 .frame(maxWidth: 120)
+                #endif
             Text(formatMax)
-                .font(.system(size: 11))
+                .font(Self.rangeFont)
                 .foregroundStyle(.secondary)
+                #if os(iOS)
+                .frame(minWidth: 34, alignment: .leading)
+                #endif
             TextField(placeholder, text: $textInput)
-                .font(.system(size: 11, design: .monospaced))
+                .font(Self.valueFont)
+                #if os(iOS)
+                .frame(width: 60)
+                .padding(.vertical, 4)
+                .padding(.horizontal, 6)
+                .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 6))
+                #else
                 .frame(width: 42)
+                #endif
                 #if os(iOS)
                 // The number pad has no Return key, so use the numbers keyboard, whose
                 // Return key reads "done" and commits the value.
@@ -55,7 +72,22 @@ struct LabeledSliderView: View {
                 }
                 .onAppear { textInput = formatValue(value) }
         }
+        .opacity(isEnabled ? 1 : 0.4)   // fade like a disabled system row
     }
+
+    // iPhone sheets: body-size rows like the rest of the Form, slider fills the row.
+    // Mac sidebar: compact.
+    #if os(iOS)
+    private static let labelFont: Font = .body
+    private static let rangeFont: Font = .caption
+    private static let valueFont: Font = .body.monospacedDigit()
+    private static let labelWidth: CGFloat = 52
+    #else
+    private static let labelFont: Font = .caption2.weight(.semibold)
+    private static let rangeFont: Font = .caption2
+    private static let valueFont: Font = .caption2.monospaced()
+    private static let labelWidth: CGFloat = 44
+    #endif
 
     /// While the field is cleared for typing, the current value shows faintly.
     private var placeholder: String { focused ? formatValue(value) : "" }
