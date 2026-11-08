@@ -284,25 +284,39 @@ final class PatternDocument {
         isDirty = true
     }
 
-    func toggleCell(_ cell: CellIndex, region: CellRegion) {
+    /// The color of a cell in the tile or a border strip.
+    func cellValue(_ cell: CellIndex, region: CellRegion) -> Bool {
+        let g: [[Bool]]
+        switch region {
+        case .tile:     g = grid
+        case .colStrip: g = colStrip
+        case .rowStrip: g = rowStrip
+        case .corner:   g = corner
+        }
+        guard cell.row < g.count, cell.col < (g.first?.count ?? 0) else { return false }
+        return g[cell.row][cell.col]
+    }
+
+    /// Sets a cell (and its linked cells) to `value`; by default the opposite of the
+    /// tapped cell, so a tap fills an empty cell and empties a filled one.
+    func toggleCell(_ cell: CellIndex, region: CellRegion, to value: Bool? = nil) {
         endReshape()
+        let v = value ?? !cellValue(cell, region: region)
         switch region {
         case .tile:
-            PatternEngine.toggleCell(cell, in: &grid,
-                                     canonical: cellToCanonical,
-                                     group: symmetryGroup, H: H, W: W)
+            PatternEngine.setCell(cell, to: v, in: &grid, group: symmetryGroup, H: H, W: W)
         case .colStrip:
-            PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &colStrip)
+            PatternEngine.setStripCell(row: cell.row, col: cell.col, to: v, in: &colStrip)
             PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &colStrip,
                                             acrossVerticalAxis: tiling.stripReflectsAcrossVerticalAxis,
                                             acrossHorizontalAxis: tiling.stripReflectsAcrossHorizontalAxis)
         case .rowStrip:
-            PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &rowStrip)
+            PatternEngine.setStripCell(row: cell.row, col: cell.col, to: v, in: &rowStrip)
             PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &rowStrip,
                                             acrossVerticalAxis: tiling.stripReflectsAcrossVerticalAxis,
                                             acrossHorizontalAxis: tiling.stripReflectsAcrossHorizontalAxis)
         case .corner:
-            PatternEngine.toggleStripCell(row: cell.row, col: cell.col, in: &corner)
+            PatternEngine.setStripCell(row: cell.row, col: cell.col, to: v, in: &corner)
             PatternEngine.applyStripReflect(row: cell.row, col: cell.col, in: &corner,
                                             acrossVerticalAxis: tiling.stripReflectsAcrossVerticalAxis,
                                             acrossHorizontalAxis: tiling.stripReflectsAcrossHorizontalAxis)
@@ -367,23 +381,21 @@ final class PatternDocument {
         cellToCanonical = result.canonical
     }
 
-    /// The drawing as it was before a run of resizes / symmetry changes began. Each change
-    /// starts again from it, so cells that fall off the edge come back when the grid grows,
-    /// and a symmetry change can be taken back. Cleared by any other edit (`endReshape()`).
+    /// The drawing as it was before a run of resizes began. Each resize starts again from
+    /// it, so cells that fall off the edge come back when the grid grows. Cleared by any other edit (`endReshape()`).
     private var reshapeBase: (grid: [[Bool]], stitches: [[Stitch]])?
 
     func endReshape() { reshapeBase = nil }
 
-    /// Rebuilds the grid for the current H, W and symmetry from `reshapeBase`: centred
-    /// (blank centre strip on an odd/even change), then completed under the group.
+    /// Rebuilds the grid for the current H and W from `reshapeBase`, centred (blank centre
+    /// strip on an odd/even change). A symmetry change leaves the drawing as it is; the
+    /// group only governs new taps.
     private func resizeGrid() {
         let base = reshapeBase ?? (grid, stitches)
         reshapeBase = base
         let sizeChanged = grid.count != H || (grid.first?.count ?? 0) != W
-        grid = PatternEngine.completed(
-            PatternEngine.centredResize(base.grid, rows: H, cols: W, blank: false), under: symmetryGroup)
-        stitches = PatternEngine.completedStitches(
-            PatternEngine.centredResize(base.stitches, rows: H, cols: W, blank: .knit), under: symmetryGroup)
+        grid = PatternEngine.centredResize(base.grid, rows: H, cols: W, blank: false)
+        stitches = PatternEngine.centredResize(base.stitches, rows: H, cols: W, blank: .knit)
         if sizeChanged { resetStrips() }
         regenerateDomain()
         fitCellSize()

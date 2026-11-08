@@ -55,19 +55,19 @@ enum PatternEngine {
 
     // MARK: - Toggle
 
-    /// Toggle the canonical representative of the tapped cell and propagate
-    /// to all orbit members. O(1) lookup via the precomputed canonical map.
-    static func toggleCell(
+    /// Sets the tapped cell and every cell linked to it under `group` to `value`.
+    /// (The copies may disagree when the drawing predates the current group; the
+    /// caller decides the value from the tapped cell, so a tap always does what it shows.)
+    static func setCell(
         _ cell: CellIndex,
+        to value: Bool,
         in grid: inout [[Bool]],
-        canonical: [CellIndex: CellIndex],
         group: SymmetryGroup,
         H: Int, W: Int
     ) {
-        guard let canon = canonical[cell] else { return }
-        let newValue = !grid[canon.row][canon.col]
-        for member in group.orbit(canon.row, canon.col, H: H, W: W) {
-            grid[member.row][member.col] = newValue
+        guard cell.row < H, cell.col < W else { return }
+        for member in group.orbit(cell.row, cell.col, H: H, W: W) {
+            grid[member.row][member.col] = value
         }
     }
 
@@ -83,12 +83,12 @@ enum PatternEngine {
         Array(repeating: Array(repeating: false, count: cols), count: rows)
     }
 
-    static func toggleStripCell(
-        row: Int, col: Int,
+    static func setStripCell(
+        row: Int, col: Int, to value: Bool,
         in strip: inout [[Bool]]
     ) {
         guard row < strip.count, col < (strip.first?.count ?? 0) else { return }
-        strip[row][col].toggle()
+        strip[row][col] = value
     }
 
     static func applyStripReflect(
@@ -151,31 +151,5 @@ extension PatternEngine {
                 return base[r][c]
             }
         }
-    }
-
-    /// Fills every copy: a cell is filled if any cell in its orbit is filled.
-    static func completed(_ grid: [[Bool]], under group: SymmetryGroup) -> [[Bool]] {
-        let H = grid.count, W = grid.first?.count ?? 0
-        guard !(group.requiresSquare && H != W) else { return grid }
-        var out = grid
-        for r in 0 ..< H { for c in 0 ..< W where grid[r][c] {
-            for cell in group.orbit(r, c, H: H, W: W) { out[cell.row][cell.col] = true }
-        } }
-        return out
-    }
-
-    /// Copies each non-knit stitch to its linked cells (as its Visual Equivalent) where
-    /// those cells are still knit, so painted stitches follow the new group too.
-    static func completedStitches(_ stitches: [[Stitch]], under group: SymmetryGroup) -> [[Stitch]] {
-        let H = stitches.count, W = stitches.first?.count ?? 0
-        guard !(group.requiresSquare && H != W) else { return stitches }
-        var out = stitches
-        for r in 0 ..< H { for c in 0 ..< W where stitches[r][c] != .knit {
-            for (cell, t) in group.linkedCells(r, c, H: H, W: W)
-            where out[cell.row][cell.col] == .knit {
-                if let e = stitches[r][c].visualEquivalent(under: t) { out[cell.row][cell.col] = e }
-            }
-        } }
-        return out
     }
 }

@@ -109,24 +109,39 @@ struct CentredResizeTests {
     }
 }
 
-struct SymmetryCompletionTests {
-    @Test func moreSymmetryFillsEveryCopy() {
-        var g = Array(repeating: Array(repeating: false, count: 4), count: 4)
-        g[0][1] = true
-        let done = PatternEngine.completed(g, under: .d4)
-        for cell in SymmetryGroup.d4.orbit(0, 1, H: 4, W: 4) { #expect(done[cell.row][cell.col]) }
-    }
-
-    @Test func goingBackRestoresTheOriginal() {
+struct SymmetryChangeTests {
+    /// A 6×6 C1 drawing with one filled cell, (0,1).
+    private func lopsided() -> PatternDocument {
         let doc = PatternDocument()
         doc.symmetryGroup = .c1
         doc.H = 6; doc.W = 6
-        doc.endReshape()
+        doc.clear()
         doc.toggleCell(CellIndex(row: 0, col: 1), region: .tile)
+        return doc
+    }
+
+    @Test func changingSymmetryLeavesTheDrawingAsItIs() {
+        let doc = lopsided()
         let before = doc.grid
         doc.symmetryGroup = .d4
-        #expect(doc.grid != before)
-        doc.symmetryGroup = .c1
         #expect(doc.grid == before)
+    }
+
+    @Test func aTapUsesTheTappedCellsColour() {
+        let doc = lopsided()
+        doc.symmetryGroup = .d4
+        // (0,4) is a mirror copy of the filled (0,1) but is itself empty: tapping it fills
+        // the whole orbit rather than erasing it.
+        doc.toggleCell(CellIndex(row: 0, col: 4), region: .tile)
+        for cell in SymmetryGroup.d4.orbit(0, 4, H: 6, W: 6) { #expect(doc.grid[cell.row][cell.col]) }
+        doc.toggleCell(CellIndex(row: 0, col: 4), region: .tile)
+        for cell in SymmetryGroup.d4.orbit(0, 4, H: 6, W: 6) { #expect(!doc.grid[cell.row][cell.col]) }
+    }
+
+    @Test func anExplicitValueSetsTheWholeOrbit() {
+        let doc = lopsided()
+        doc.symmetryGroup = .d4
+        doc.toggleCell(CellIndex(row: 0, col: 1), region: .tile, to: true)   // already filled: stays
+        for cell in SymmetryGroup.d4.orbit(0, 1, H: 6, W: 6) { #expect(doc.grid[cell.row][cell.col]) }
     }
 }

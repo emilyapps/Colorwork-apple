@@ -10,6 +10,8 @@ struct GridCanvasView: View {
     // Track cells already toggled in the current drag gesture
     @State private var dragVisited  = Set<CellIndex>()
     @State private var dragRegion:  CellRegion? = nil
+    /// Fill or erase, decided by the first cell of the stroke.
+    @State private var dragValue:   Bool? = nil
     @State private var scaleBaseSize: Double = 0
 
     var body: some View {
@@ -85,7 +87,9 @@ struct GridCanvasView: View {
         dragVisited.insert(key)
         switch doc.paintTool {
         case .color:
-            doc.toggleCell(cell, region: region)
+            let v = dragValue ?? !doc.cellValue(cell, region: region)
+            dragValue = v
+            doc.toggleCell(cell, region: region, to: v)
         case .stitch(let stitch):
             // Border strips are color-only
             if region == .tile { doc.paintStitch(stitch, at: cell) }
@@ -95,6 +99,7 @@ struct GridCanvasView: View {
     private func endDrag() {
         dragVisited.removeAll()
         dragRegion = nil
+        dragValue = nil
     }
 
     // MARK: - Hit testing
