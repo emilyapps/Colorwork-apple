@@ -1,17 +1,13 @@
 # Notes for next session
 
-_Last updated 2026-10-24._
+_Last updated 2026-11-08._
 
 ## Where things stand
 
-- The stitches-and-wedges feature is finished. All its issues are closed: the PRD #1 and the slices #2–#10.
-- The work is on branch `docs/stitches-and-wedges` (22 commits ahead of `main`). It's pushed, but not merged and has no pull request yet.
-- `CONTEXT.md` is the glossary and holds the rules for where gaps go. `docs/adr/` holds the two design decisions.
-
-## Parked from the start of the session
-
-1. **List reordering on macOS.** Reordering Patterns and Projects works and persists on iOS, but not on the Mac.
-2. **iPhone editor toolbar.** Done 2026-11-08: the Editor/Library tab bar is gone; Library is home and the editor opens on top with a back button (Pages/Freeform style), Undo/Redo moved top-right.
+- **Next: audit the Mac app** against Apple's HIG, the way the iPhone was audited in `docs/gui-audit-2026-11.md`. Known Mac items: the sidebar still has CMYK (iPhone's Colors now uses Palette / Custom / Compare); list reordering of Patterns and Projects doesn't work on the Mac; the new View › Zoom menu and "Drawing with…" caption were built but never looked at.
+- The iPhone audit and the 2026-11-08 follow-up round are done and on `main` (pushed). Details in `docs/gui-audit-2026-11.md`.
+- The stitches-and-wedges feature is finished (PRD #1, slices #2–#10 closed). `CONTEXT.md` is the glossary and holds the rules for where gaps go; `docs/adr/` holds the design decisions.
+- Other branches: `docs/stitches-and-wedges` and local `gui-audit` are merged into `main`; `agentic-colorwork` (on GitHub) is not.
 
 ## Your ideas for next time
 
@@ -45,8 +41,8 @@ _Last updated 2026-10-24._
   - stitch symbols in the Circular View
   - a more realistic ring spacing option (rows are evenly spaced today)
   - the Circular View's outlines are all-or-nothing. With the yoke there are none.
+- **Low fill density can generate a blank chart** (seen at ρ = 0.05, 8×8 D4).
 - **Limits still at 25:** width, the square-grid size N (4× symmetry), and the brick offset "Col ↓". Height goes to 50.
-- **Checked 2026-11-08:** stitch totals on the iPhone canvas for a Wedge work (as on the Mac and in exports).
 - **The yoke's "V" stitch** (beside each increase) is charted as plain knit. There's no "V" stitch in the catalog.
 - **Out of scope, as planned:**
   - written row-by-row instructions
@@ -72,7 +68,8 @@ _Last updated 2026-10-24._
   - a guarded writer that saved the yoke patterns into the Mac Library
 - **The two yoke patterns** ("Yoke – published (increases)" and "Yoke – bottom-up (decreases)") are saved in the Simulator's Library and in the Mac app's Library.
 - **iOS Simulator tool quirks:**
-  - Screenshots lag taps by a second or two.
+  - Screenshots lag taps by a second or two; segmented controls ignore taps.
+  - The tool's `launch` sometimes kills the app on the first tap; `xcrun simctl install` + `xcrun simctl launch --terminate-running-process <udid> emilyapps.Colorwork` is reliable.
   - Switches ignore taps, so slide them instead.
   - Hardware-key presses (select-all, return) hide the on-screen keyboard.
   - Number boxes are narrow, so tap their center.
