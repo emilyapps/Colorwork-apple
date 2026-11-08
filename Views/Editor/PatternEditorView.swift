@@ -75,13 +75,14 @@ struct PatternEditorView: View {
             GridCanvasView()
                 .ignoresSafeArea(edges: .horizontal)
                 .frame(maxHeight: .infinity)
-                // The group governs new taps, not what's already drawn, so say which it is.
-                .overlay(alignment: .bottom) {
-                    Button { showControls = true } label: { symmetryCaption }
-                        .buttonStyle(.plain)
-                        .padding(.bottom, 6)
-                        .accessibilityHint("Opens Settings")
-                }
+
+            // The group governs new taps, not what's already drawn, so say which it is.
+            // Its own line (not an overlay) so it never covers the chart's stitch key.
+            Button { showControls = true } label: { symmetryCaption }
+                .buttonStyle(.plain)
+                .padding(.horizontal)
+                .padding(.vertical, 4)
+                .accessibilityHint("Opens Settings")
 
             Divider()
 
@@ -109,13 +110,12 @@ struct PatternEditorView: View {
             .padding(.horizontal, 4)
         }
         .toolbar {
-            ToolbarItemGroup(placement: .topBarLeading) {
+            // Back to the Library sits top-left, so Undo/Redo join Export on the right.
+            ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Undo", systemImage: "arrow.uturn.backward") { doc.undo() }
                     .disabled(!doc.canUndo)
                 Button("Redo", systemImage: "arrow.uturn.forward") { doc.redo() }
                     .disabled(!doc.canRedo)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
                 Button("Export", systemImage: "square.and.arrow.up") { export() }
             }
         }
