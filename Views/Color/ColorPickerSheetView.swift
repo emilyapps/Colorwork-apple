@@ -121,7 +121,15 @@ struct ColorPickerSheetView: View {
     }
 
     /// Apple's color picker (grid, spectrum, sliders, eyedropper, saved colors).
-    private var customPicker: some View {
+    /// On iPhone it sits right in the tab; the Mac keeps the system color panel.
+    @ViewBuilder private var customPicker: some View {
+        #if os(iOS)
+        // Fills the space left under the preview: no scroll view, since a swipe over
+        // the spectrum would pick a colour rather than scroll.
+        InlineColorPicker(hex: activeColor.hex) { hex in
+            activeColor.setHex(hex); doc.rebuildDescriptors()
+        }
+        #else
         VStack(spacing: 12) {
             ColorPicker(selection: Binding(
                 get: { ColorMath.color(from: activeColor.hex) },
@@ -130,16 +138,56 @@ struct ColorPickerSheetView: View {
                 }), supportsOpacity: false) {
                 Text("Choose a custom \(activeTarget == .fill ? "fill" : "background") color")
             }
-            Text("Grid, spectrum and sliders, plus an eyedropper for matching a yarn photo.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
             Spacer()
         }
         .padding(.horizontal)
         .padding(.top, 8)
+        #endif
     }
 }
+
+#if os(iOS)
+/// UIColorPickerViewController embedded as a plain view (not presented), so the
+/// preview and the Fill/Background wells stay visible above it.
+struct InlineColorPicker: UIViewControllerRepresentable {
+    let hex: String
+    let onChange: (String) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onChange: onChange) }
+
+    func makeUIViewController(context: Context) -> UIColorPickerViewController {
+        let vc = UIColorPickerViewController()
+        vc.supportsAlpha = false
+        vc.title = ""          // the sheet is already titled "Colors"
+        vc.selectedColor = UIColor(ColorMath.color(from: hex))
+        vc.delegate = context.coordinator
+        context.coordinator.lastHex = hex
+        return vc
+    }
+
+    func updateUIViewController(_ vc: UIColorPickerViewController, context: Context) {
+        context.coordinator.onChange = onChange
+        // Follow the selected well and typed hex values, but don't fight a live drag.
+        if hex != context.coordinator.lastHex {
+            context.coordinator.lastHex = hex
+            vc.selectedColor = UIColor(ColorMath.color(from: hex))
+        }
+    }
+
+    final class Coordinator: NSObject, UIColorPickerViewControllerDelegate {
+        var onChange: (String) -> Void
+        var lastHex = ""
+        init(onChange: @escaping (String) -> Void) { self.onChange = onChange }
+
+        func colorPickerViewController(_ vc: UIColorPickerViewController,
+                                       didSelect color: UIColor, continuously: Bool) {
+            let hex = ColorMath.hex(from: Color(uiColor: color))
+            lastHex = hex
+            onChange(hex)
+        }
+    }
+}
+#endif
 
 // MARK: - iOS sheet wrapper
 
