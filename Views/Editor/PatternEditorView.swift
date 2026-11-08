@@ -39,6 +39,8 @@ struct PatternEditorView: View {
                         Text("Pattern")
                             .font(.footnote.weight(.semibold))
                         StitchToolPicker()
+                        Spacer()
+                        symmetryCaption.padding(.trailing, 8)
                     }
                     .padding([.top, .leading], 8)
                     GridCanvasView()
@@ -73,6 +75,13 @@ struct PatternEditorView: View {
             GridCanvasView()
                 .ignoresSafeArea(edges: .horizontal)
                 .frame(maxHeight: .infinity)
+                // The group governs new taps, not what's already drawn, so say which it is.
+                .overlay(alignment: .bottom) {
+                    Button { showControls = true } label: { symmetryCaption }
+                        .buttonStyle(.plain)
+                        .padding(.bottom, 6)
+                        .accessibilityHint("Opens Settings")
+                }
 
             Divider()
 
@@ -173,6 +182,15 @@ struct PatternEditorView: View {
         }
     }
     #endif
+
+    /// "Drawing with C4 symmetry (pinwheel)": the rule for new taps.
+    private var symmetryCaption: some View {
+        Text("Drawing with \(doc.symmetryGroup.displayName) symmetry (\(doc.symmetryGroup.motifExample))")
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+    }
 
     // MARK: - Export
 
