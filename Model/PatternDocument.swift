@@ -187,6 +187,17 @@ final class PatternDocument {
         canRedo = undoManager?.canRedo ?? false
     }
 
+    /// One undo step that returns to `before` (used when a sheet's edits are kept).
+    func registerUndo(restoring before: PatternSnapshot, name: String) {
+        undoManager?.registerUndo(withTarget: self) { doc in
+            doc.registerUndo(restoring: PatternSnapshot(from: doc), name: name)
+            before.apply(to: doc, restoringViewSettings: true)
+            doc.refreshUndoState()
+        }
+        undoManager?.setActionName(name)
+        refreshUndoState()
+    }
+
     func undo() { undoManager?.undo(); refreshUndoState() }
     func redo() { undoManager?.redo(); refreshUndoState() }
     private func refreshUndoState() {

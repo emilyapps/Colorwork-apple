@@ -116,7 +116,7 @@ struct TilingSheetView: View {
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
             #endif
-            .cancelDoneToolbar()
+            .cancelDoneToolbar("Change Tiling")
         }
     }
 

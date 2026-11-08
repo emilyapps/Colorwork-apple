@@ -120,7 +120,7 @@ struct PatternEditorView: View {
                 ControlPanelView()
                     .navigationTitle("Settings")
                     .navigationBarTitleDisplayMode(.inline)
-                    .cancelDoneToolbar()
+                    .cancelDoneToolbar("Change Settings")
             }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -198,30 +198,47 @@ struct PatternEditorView: View {
 
 // MARK: - Cancel / Done for editing sheets
 
-/// Remembers the whole document when the sheet opens. Cancel puts it back
-/// (stitches included, in case a size or symmetry change redrew the chart); Done keeps it.
+/// While the sheet is open its edits stay out of the undo history. Done (or swiping the
+/// sheet away) adds them as one undo step; Cancel puts the document back as it was when
+/// the sheet opened, stitches included, and leaves the history untouched.
 struct CancelDoneToolbar: ViewModifier {
+    let actionName: String
     @Environment(\.dismiss) private var dismiss
     @Environment(PatternDocument.self) private var doc
     @State private var onOpen: PatternSnapshot? = nil
+    @State private var cancelled = false
 
     func body(content: Content) -> some View {
         content
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        onOpen?.apply(to: doc)
-                        dismiss()
-                    }
+                    Button("Cancel") { cancelled = true; dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
-            .onAppear { if onOpen == nil { onOpen = PatternSnapshot(from: doc) } }
+            .onAppear {
+                guard onOpen == nil else { return }
+                onOpen = PatternSnapshot(from: doc)
+                doc.undoManager?.disableUndoRegistration()
+            }
+            .onDisappear {
+                guard let before = onOpen else { return }
+                onOpen = nil
+                if cancelled { before.apply(to: doc) }
+                doc.undoManager?.enableUndoRegistration()
+                if !cancelled,
+                   let a = try? JSONEncoder().encode(before),
+                   let b = try? JSONEncoder().encode(PatternSnapshot(from: doc)), a != b {
+                    doc.registerUndo(restoring: before, name: actionName)
+                }
+            }
     }
 }
 
 extension View {
-    func cancelDoneToolbar() -> some View { modifier(CancelDoneToolbar()) }
+    func cancelDoneToolbar(_ actionName: String) -> some View {
+        modifier(CancelDoneToolbar(actionName: actionName))
+    }
 }
