@@ -254,6 +254,7 @@ final class PatternDocument {
 
     func generate() {
         pushUndo("Generate")
+        endReshape()
         if symmetryGroup.requiresSquare {
             isMutatingInternally = true
             W = H
@@ -274,6 +275,7 @@ final class PatternDocument {
 
     func clear() {
         pushUndo("Clear")
+        endReshape()
         grid = PatternEngine.clearGrid(H: H, W: W)
         stitches = Stitch.allKnit(rows: H, cols: W)
         resetStrips()
@@ -283,6 +285,7 @@ final class PatternDocument {
     }
 
     func toggleCell(_ cell: CellIndex, region: CellRegion) {
+        endReshape()
         switch region {
         case .tile:
             PatternEngine.toggleCell(cell, in: &grid,
@@ -313,6 +316,7 @@ final class PatternDocument {
     /// Visual Equivalent. If the current group doesn't allow the stitch, the group is downgraded
     /// first, with a notice. Border strips are color-only, so only the tile region takes stitches.
     func paintStitch(_ stitch: Stitch, at cell: CellIndex) {
+        endReshape()
         let used = Set(stitches.joined()).union([stitch])
         var changes: [String] = []
         if !symmetryGroup.allows([stitch]) {
@@ -343,6 +347,7 @@ final class PatternDocument {
                          + linked.filter({ $0.transformation == .identity }) {
             if let s = stitch.visualEquivalent(under: t) { stitches[member.row][member.col] = s }
         }
+        endReshape()   // a downgrade above started a reshape; this paint ends it
         rebuildDescriptors()
         isDirty = true
     }
@@ -362,18 +367,24 @@ final class PatternDocument {
         cellToCanonical = result.canonical
     }
 
+    /// The drawing as it was before a run of resizes / symmetry changes began. Each change
+    /// starts again from it, so cells that fall off the edge come back when the grid grows,
+    /// and a symmetry change can be taken back. Cleared by any other edit (`endReshape()`).
+    private var reshapeBase: (grid: [[Bool]], stitches: [[Stitch]])?
+
+    func endReshape() { reshapeBase = nil }
+
+    /// Rebuilds the grid for the current H, W and symmetry from `reshapeBase`: centred
+    /// (blank centre strip on an odd/even change), then completed under the group.
     private func resizeGrid() {
-        let oldRows = grid.count
-        let oldCols = grid.first?.count ?? 0
-        if oldRows != H || oldCols != W {
-            grid = (0 ..< H).map { r in
-                (0 ..< W).map { c in
-                    r < oldRows && c < oldCols ? grid[r][c] : false
-                }
-            }
-            resetStrips()
-        }
-        resizeStitches()
+        let base = reshapeBase ?? (grid, stitches)
+        reshapeBase = base
+        let sizeChanged = grid.count != H || (grid.first?.count ?? 0) != W
+        grid = PatternEngine.completed(
+            PatternEngine.centredResize(base.grid, rows: H, cols: W, blank: false), under: symmetryGroup)
+        stitches = PatternEngine.completedStitches(
+            PatternEngine.centredResize(base.stitches, rows: H, cols: W, blank: .knit), under: symmetryGroup)
+        if sizeChanged { resetStrips() }
         regenerateDomain()
         fitCellSize()
         rebuildDescriptors()
@@ -572,6 +583,7 @@ struct PatternSnapshot: Codable {
         doc.showDomain    = showDomain
         doc.fillColor.setHex(fillHex)
         doc.bgColor.setHex(bgHex)
+        doc.endReshape()
         // Recompute domain from loaded grid dimensions + symmetry
         doc.regenerateDomain()
         doc.rebuildDescriptors()

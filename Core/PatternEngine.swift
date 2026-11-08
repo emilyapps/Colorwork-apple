@@ -108,3 +108,74 @@ enum PatternEngine {
         if acrossVerticalAxis && acrossHorizontalAxis && mr != row && mc != col { strip[mr][mc]  = val }
     }
 }
+
+// MARK: - Reshaping (resize and symmetry change keep the drawing)
+
+extension PatternEngine {
+
+    /// For one axis going from `n` to `m` cells: which old index each new index shows
+    /// (nil = a new blank cell). The drawing stays centred. When the parity changes, a
+    /// blank strip is added through the centre (even → odd) or the centre strip is
+    /// removed (odd → even); the rest is padded or cropped evenly on both sides.
+    static func centredIndexMap(from n: Int, to m: Int) -> [Int?] {
+        var idx: [Int?] = Array(0 ..< n)
+        if n % 2 != m % 2 {
+            if n % 2 == 0 {
+                if m < n {                                   // crop first, then add the strip
+                    let k = (n - m + 1) / 2
+                    idx = Array(idx[k ..< n - k])
+                }
+                idx.insert(nil, at: idx.count / 2)
+            } else {
+                idx.remove(at: idx.count / 2)
+            }
+        }
+        let d = m - idx.count                                // now even: pad or crop evenly
+        if d > 0 {
+            let pad = [Int?](repeating: nil, count: d / 2)
+            idx = pad + idx + pad
+        } else if d < 0 {
+            let k = -d / 2
+            idx = Array(idx[k ..< idx.count - k])
+        }
+        return idx
+    }
+
+    /// `base` resized to rows × cols, centred, using `centredIndexMap` on each axis.
+    static func centredResize<T>(_ base: [[T]], rows: Int, cols: Int, blank: T) -> [[T]] {
+        let rm = centredIndexMap(from: base.count, to: rows)
+        let cm = centredIndexMap(from: base.first?.count ?? 0, to: cols)
+        return rm.map { r in
+            cm.map { c in
+                guard let r, let c else { return blank }
+                return base[r][c]
+            }
+        }
+    }
+
+    /// Fills every copy: a cell is filled if any cell in its orbit is filled.
+    static func completed(_ grid: [[Bool]], under group: SymmetryGroup) -> [[Bool]] {
+        let H = grid.count, W = grid.first?.count ?? 0
+        guard !(group.requiresSquare && H != W) else { return grid }
+        var out = grid
+        for r in 0 ..< H { for c in 0 ..< W where grid[r][c] {
+            for cell in group.orbit(r, c, H: H, W: W) { out[cell.row][cell.col] = true }
+        } }
+        return out
+    }
+
+    /// Copies each non-knit stitch to its linked cells (as its Visual Equivalent) where
+    /// those cells are still knit, so painted stitches follow the new group too.
+    static func completedStitches(_ stitches: [[Stitch]], under group: SymmetryGroup) -> [[Stitch]] {
+        let H = stitches.count, W = stitches.first?.count ?? 0
+        guard !(group.requiresSquare && H != W) else { return stitches }
+        var out = stitches
+        for r in 0 ..< H { for c in 0 ..< W where stitches[r][c] != .knit {
+            for (cell, t) in group.linkedCells(r, c, H: H, W: W)
+            where out[cell.row][cell.col] == .knit {
+                if let e = stitches[r][c].visualEquivalent(under: t) { out[cell.row][cell.col] = e }
+            }
+        } }
+        return out
+    }
+}

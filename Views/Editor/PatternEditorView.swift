@@ -235,6 +235,7 @@ struct CancelDoneToolbar: ViewModifier {
             .onDisappear {
                 guard let before = onOpen else { return }
                 onOpen = nil
+                doc.endReshape()
                 if cancelled { before.apply(to: doc) }
                 doc.undoManager?.enableUndoRegistration()
                 if !cancelled,
