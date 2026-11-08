@@ -110,13 +110,13 @@ struct PatternEditorView: View {
             .padding(.horizontal, 4)
         }
         .toolbar {
-            // Back to the Library sits top-left, so Undo/Redo join Export on the right.
+            // Back to the Library sits top-left, so Undo/Redo go on the right.
+            // Export lives in the title menu.
             ToolbarItemGroup(placement: .topBarTrailing) {
                 Button("Undo", systemImage: "arrow.uturn.backward") { doc.undo() }
                     .disabled(!doc.canUndo)
                 Button("Redo", systemImage: "arrow.uturn.forward") { doc.redo() }
                     .disabled(!doc.canRedo)
-                Button("Export", systemImage: "square.and.arrow.up") { export() }
             }
         }
         .confirmationDialog("Export As", isPresented: $showExportPicker) {
