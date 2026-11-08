@@ -1,5 +1,5 @@
 // ContentView.swift
-// Root navigation: NavigationSplitView on Mac/iPad, TabView on iPhone.
+// Root navigation: NavigationSplitView on Mac/iPad, Library → editor stack on iPhone.
 
 import SwiftUI
 import SwiftData
@@ -40,8 +40,10 @@ struct ContentView: View {
     @Environment(PatternDocument.self) var doc
     @Environment(\.horizontalSizeClass) var sizeClass
 
-    private enum Tab { case editor, library }
-    @State private var tab: Tab = .editor
+    /// iPhone: Library is home; the editor is pushed on top (Pages/Freeform style).
+    /// The app opens on the editor, so Back goes to the Library.
+    private enum Screen: Hashable { case editor }
+    @State private var path: [Screen] = [.editor]
 
     var body: some View {
         #if os(macOS)
@@ -74,20 +76,11 @@ struct ContentView: View {
                 }
             }
             else {
-                // iPhone: tab bar
-                TabView(selection: $tab) {
-                    NavigationStack {
-                        PatternEditorView()
-                    }
-                    .tabItem { Label("Editor", systemImage: "square.grid.3x3") }
-                    .tag(Tab.editor)
-
-                    NavigationStack {
-                        LibraryView(onOpen: { tab = .editor })
-                            .navigationTitle("Library")
-                    }
-                    .tabItem { Label("Library", systemImage: "folder") }
-                    .tag(Tab.library)
+                // iPhone: Library at the root, editor pushed on top.
+                NavigationStack(path: $path) {
+                    LibraryView(onOpen: { path = [.editor] })
+                        .navigationTitle("Library")
+                        .navigationDestination(for: Screen.self) { _ in PatternEditorView() }
                 }
             }
         }

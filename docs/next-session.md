@@ -11,7 +11,7 @@ _Last updated 2026-10-24._
 ## Parked from the start of the session
 
 1. **List reordering on macOS.** Reordering Patterns and Projects works and persists on iOS, but not on the Mac.
-2. **iPhone editor toolbar.** The tools moved to a row below the canvas (commit 30096c9). The redesign you'd mentioned is still parked.
+2. **iPhone editor toolbar.** Done 2026-11-08: the Editor/Library tab bar is gone; Library is home and the editor opens on top with a back button (Pages/Freeform style), Undo/Redo moved top-right.
 
 ## Your ideas for next time
 
@@ -46,7 +46,7 @@ _Last updated 2026-10-24._
   - a more realistic ring spacing option (rows are evenly spaced today)
   - the Circular View's outlines are all-or-nothing. With the yoke there are none.
 - **Limits still at 25:** width, the square-grid size N (4× symmetry), and the brick offset "Col ↓". Height goes to 50.
-- **Not checked:** stitch totals on the iPhone canvas for a Wedge. They work on the Mac and in exports.
+- **Checked 2026-11-08:** stitch totals on the iPhone canvas for a Wedge work (as on the Mac and in exports).
 - **The yoke's "V" stitch** (beside each increase) is charted as plain knit. There's no "V" stitch in the catalog.
 - **Out of scope, as planned:**
   - written row-by-row instructions
