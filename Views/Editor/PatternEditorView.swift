@@ -120,11 +120,7 @@ struct PatternEditorView: View {
                 ControlPanelView()
                     .navigationTitle("Settings")
                     .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Done") { showControls = false }
-                        }
-                    }
+                    .cancelDoneToolbar()
             }
                 .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
@@ -198,4 +194,34 @@ struct PatternEditorView: View {
             .present(av, animated: true)
     }
     #endif
+}
+
+// MARK: - Cancel / Done for editing sheets
+
+/// Remembers the whole document when the sheet opens. Cancel puts it back
+/// (stitches included, in case a size or symmetry change redrew the chart); Done keeps it.
+struct CancelDoneToolbar: ViewModifier {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(PatternDocument.self) private var doc
+    @State private var onOpen: PatternSnapshot? = nil
+
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onOpen?.apply(to: doc)
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+            .onAppear { if onOpen == nil { onOpen = PatternSnapshot(from: doc) } }
+    }
+}
+
+extension View {
+    func cancelDoneToolbar() -> some View { modifier(CancelDoneToolbar()) }
 }
