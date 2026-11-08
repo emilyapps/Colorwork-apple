@@ -77,8 +77,9 @@ struct ControlPanelView: View {
                 }
             }
 
-            Section("Fill Density") {
+            Section("Fill Density - used when you tap Generate") {
                 LabeledSliderView(label: "ρ", range: 0.05...0.95, step: 0.01, value: $doc.density)
+                Button("Generate", systemImage: "wand.and.stars") { doc.generate() }
             }
 
             Section {
