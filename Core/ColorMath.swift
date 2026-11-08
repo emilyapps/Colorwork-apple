@@ -130,10 +130,10 @@ enum ColorMath {
     /// - Hues: complementary (180°), split-complementary (±150°), analogous (±30°),
     ///   triadic (±120°).
     /// - Muted, yarn-like saturation (18–45%), so nothing comes out garish.
-    /// - Lightness is pushed away from `base` just far enough for at least AA contrast
-    ///   (4.5:1) — readable as colorwork without jumping to black or white. If AA
+    /// - Lightness is pushed away from `base` just far enough to reach `target` contrast
+    ///   (default AA, 4.5:1) — readable as colorwork without jumping to black or white. If AA
     ///   can't be reached in either direction, the most contrasting lightness is used.
-    static func harmonies(for base: String) -> [Harmony] {
+    static func harmonies(for base: String, contrast target: Double = 4.5) -> [Harmony] {
         guard let (r, g, b) = hexToRGB(base) else { return [] }
         let (h, s, l) = rgbToHSL(r: r, g: g, b: b)
         let sMuted = min(0.45, max(0.18, s * 0.7))
@@ -145,15 +145,14 @@ enum ColorMath {
         ]
         return slots.map { name, offset in
             let hue = (h + offset).truncatingRemainder(dividingBy: 360)
-            return Harmony(name: name, hex: contrastingLightness(hue: hue, s: sMuted, from: l, against: base))
+            return Harmony(name: name, hex: contrastingLightness(hue: hue, s: sMuted, from: l, against: base, target: target))
         }
     }
 
     /// The first lightness, stepping away from `start`, whose contrast with `against`
-    /// reaches 4.5:1; tries the more promising direction first.
+    /// reaches `target`; tries the more promising direction first.
     private static func contrastingLightness(hue: Double, s: Double, from start: Double,
-                                             against: String) -> String {
-        let target = 4.5
+                                             against: String, target: Double) -> String {
         let darkerFirst = relativeLuminance(against) > 0.18
         var best = (hex: hslToHex(h: hue, s: s, l: start), ratio: 0.0)
         for goDarker in [darkerFirst, !darkerFirst] {

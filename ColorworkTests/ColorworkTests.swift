@@ -45,3 +45,24 @@ struct HarmonySuggestionTests {
         #expect(names == ["Complementary", "Split", "Split", "Analogous", "Analogous", "Triadic", "Triadic"])
     }
 }
+
+struct HarmonyContrastTargetTests {
+    @Test("Suggestions reach the requested contrast when it is reachable",
+          arguments: [3.0, 4.5, 7.0])
+    func reachesTarget(target: Double) {
+        // Mid-tones (e.g. steel blue) can't reach 7:1 against anything; light and dark can.
+        let bases = target >= 7 ? ["#1a1a2e", "#f5f0e8"] : ["#1a1a2e", "#f5f0e8", "#4682b4"]
+        for base in bases {
+            for h in ColorMath.harmonies(for: base, contrast: target) {
+                #expect(ColorMath.contrastRatio(h.hex, base) >= target, "\(h.name) \(h.hex) vs \(base) @ \(target)")
+            }
+        }
+    }
+
+    @Test func unreachableTargetFallsBackToMostContrast() {
+        // Steel blue can't reach 7:1; it falls back to the most contrast it can get.
+        for h in ColorMath.harmonies(for: "#4682b4", contrast: 7) {
+            #expect(ColorMath.contrastRatio(h.hex, "#4682b4") >= 4.0)
+        }
+    }
+}

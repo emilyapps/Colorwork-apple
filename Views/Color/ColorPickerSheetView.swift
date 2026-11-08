@@ -146,6 +146,8 @@ struct ColorPickerSheetView: View {
 struct ColorSheetView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(PatternDocument.self) var doc
+    /// Colors when the sheet opened, so Cancel can put them back.
+    @State private var onOpen: (fill: String, bg: String)? = nil
 
     var body: some View {
         NavigationStack {
@@ -162,10 +164,23 @@ struct ColorSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             #endif
             .toolbar {
+                // Cancel restores both colors; the inner view then sees no change
+                // and registers no undo step. Done keeps them (one undo step).
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        if let o = onOpen {
+                            doc.fillColor.setHex(o.fill)
+                            doc.bgColor.setHex(o.bg)
+                            doc.rebuildDescriptors()
+                        }
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }
             }
         }
+        .onAppear { if onOpen == nil { onOpen = (doc.fillColor.hex, doc.bgColor.hex) } }
     }
 }

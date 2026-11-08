@@ -8,6 +8,8 @@ struct ColorCompareView: View {
     @Environment(PatternDocument.self) var doc
     /// Which color is being edited; suggestions are for the *other* one.
     var editingFill: Bool = true
+    /// How much contrast suggestions aim for: 3 (AA Large) up to 15. Remembered.
+    @AppStorage("suggestionContrast") private var targetContrast = 4.5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -34,7 +36,18 @@ struct ColorCompareView: View {
                 .font(.subheadline).foregroundStyle(.secondary)
                 .padding(.top, 6)
             let base = editingFill ? doc.fillColor.hex : doc.bgColor.hex   // the colour being edited
-            let harmonies = ColorMath.harmonies(for: base)
+            HStack(spacing: 8) {
+                Text("Aim for").font(.subheadline)
+                Text("3").font(.caption).foregroundStyle(.secondary)
+                Slider(value: $targetContrast, in: 3...15, step: 0.5)
+                    .accessibilityLabel("Suggestion contrast")
+                    .accessibilityValue(String(format: "%.1f to 1", targetContrast))
+                Text("15").font(.caption).foregroundStyle(.secondary)
+                Text(String(format: "%.1f:1", targetContrast))
+                    .font(.subheadline.monospacedDigit())
+                    .frame(minWidth: 44, alignment: .trailing)
+            }
+            let harmonies = ColorMath.harmonies(for: base, contrast: targetContrast)
             LazyVGrid(columns: Array(repeating: .init(.flexible(), spacing: 6), count: 4),
                       alignment: .leading, spacing: 10) {
                 ForEach(Array(harmonies.enumerated()), id: \.offset) { _, harmony in
