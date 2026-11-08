@@ -117,12 +117,21 @@ struct PatternEditorView: View {
         }
         .sheet(isPresented: $showControls) {
             NavigationStack {
-                ControlPanelView()
-                    .navigationTitle("Settings")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .cancelDoneToolbar("Change Settings")
+                // Preview on top (a third of the sheet), controls scroll underneath,
+                // like the Colors and Tiling sheets.
+                GeometryReader { geo in
+                    VStack(spacing: 0) {
+                        ChartPreviewView()
+                            .frame(height: geo.size.height / 3)
+                        Divider()
+                        ControlPanelView()
+                    }
+                }
+                .navigationTitle("Settings")
+                .navigationBarTitleDisplayMode(.inline)
+                .cancelDoneToolbar("Change Settings")
             }
-                .presentationDetents([.medium, .large])
+                .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showColors) {

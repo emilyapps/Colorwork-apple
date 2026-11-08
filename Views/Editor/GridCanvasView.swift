@@ -199,3 +199,30 @@ func drawDescriptors(_ descriptors: [RenderDescriptor], in ctx: GraphicsContext)
         }
     }
 }
+
+/// Look-only copy of the chart, scaled to fit its space. Used as the Settings preview:
+/// it ignores taps and never changes the document's zoom (cellSize).
+struct ChartPreviewView: View {
+    @Environment(PatternDocument.self) var doc
+
+    var body: some View {
+        GeometryReader { geo in
+            let size = doc.tileCanvasSize
+            let margin: CGFloat = 12
+            let scale = size.width > 0 && size.height > 0
+                ? min((geo.size.width - margin * 2) / size.width,
+                      (geo.size.height - margin * 2) / size.height)
+                : 1
+            Canvas { ctx, _ in
+                var c = ctx
+                c.scaleBy(x: scale, y: scale)
+                drawDescriptors(doc.tileDescriptors, in: c)
+            }
+            .frame(width: size.width * scale, height: size.height * scale)
+            .frame(width: geo.size.width, height: geo.size.height)   // centre it
+        }
+        .allowsHitTesting(false)
+        .accessibilityElement()
+        .accessibilityLabel("Chart preview")
+    }
+}
