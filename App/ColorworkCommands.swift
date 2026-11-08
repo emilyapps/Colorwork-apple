@@ -66,6 +66,17 @@ struct ColorworkCommands: Commands {
                 .keyboardShortcut(.delete, modifiers: .command)
         }
 
+        // Zoom for mouse users (trackpads can also pinch). Same 8–60 range as pinching.
+        CommandGroup(before: .toolbar) {
+            Button("Zoom In") { zoom(by: 1.25) }
+                .keyboardShortcut("+", modifiers: .command)
+            Button("Zoom Out") { zoom(by: 0.8) }
+                .keyboardShortcut("-", modifiers: .command)
+            Button("Zoom to Fit") { doc?.fitCellSize() }
+                .keyboardShortcut("0", modifiers: .command)
+            Divider()
+        }
+
         CommandGroup(after: .saveItem) {
             Button("New Project") { newProject?() }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
@@ -77,6 +88,12 @@ struct ColorworkCommands: Commands {
             Button("Export\u{2026}") { if let d = doc { ExportPanel.show(doc: d) } }
                 .keyboardShortcut("e", modifiers: .command)
         }
+    }
+
+    private func zoom(by factor: Double) {
+        guard let doc else { return }
+        doc.cellSize = max(8, min(60, (doc.cellSize * factor).rounded()))
+        doc.rebuildDescriptors()
     }
 }
 #endif

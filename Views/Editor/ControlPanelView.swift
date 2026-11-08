@@ -81,11 +81,6 @@ struct ControlPanelView: View {
                 LabeledSliderView(label: "ρ", range: 0.05...0.95, step: 0.01, value: $doc.density)
             }
 
-            Section("Cell Size (px)") {
-                LabeledSliderView(label: "px", range: 8...60, step: 1, value: $doc.cellSize)
-                    .onChange(of: doc.cellSize) { _, _ in doc.rebuildDescriptors() }
-            }
-
             Section {
                 Toggle("Highlight Domain", isOn: $doc.showDomain)
                     .onChange(of: doc.showDomain) { _, _ in doc.rebuildDescriptors() }
